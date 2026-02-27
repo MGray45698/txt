@@ -12,9 +12,11 @@ public interface ITextEditorService
     bool CanEdit { get; }
     bool IsBoldActive { get; }
     bool IsItalicActive { get; }
+    bool IsUnderlineActive { get; }
 
     void ToggleBold();
     void ToggleItalic();
+    void ToggleUnderline();
 }
 
 public class MainViewModel : INotifyPropertyChanged
@@ -32,9 +34,11 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _saveCommand;
     private readonly RelayCommand _boldCommand;
     private readonly RelayCommand _italicCommand;
+    private readonly RelayCommand _underlineCommand;
     private ITextEditorService? _editorService;
     private bool _isBoldActive;
     private bool _isItalicActive;
+    private bool _isUnderlineActive;
 
     public MainViewModel()
     {
@@ -42,11 +46,13 @@ public class MainViewModel : INotifyPropertyChanged
         _saveCommand = new RelayCommand(_ => ExecuteAction("Сохранить документ"), _ => IsDocumentLoaded);
         _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
         _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
+        _underlineCommand = new RelayCommand(_ => ExecuteUnderline(), _ => CanExecuteTextFormat());
 
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
         BoldCommand = _boldCommand;
         ItalicCommand = _italicCommand;
+        UnderlineCommand = _underlineCommand;
         ToggleDocumentStateCommand = new RelayCommand(_ => IsDocumentLoaded = !IsDocumentLoaded);
     }
 
@@ -56,6 +62,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand SaveCommand { get; }
     public ICommand BoldCommand { get; }
     public ICommand ItalicCommand { get; }
+    public ICommand UnderlineCommand { get; }
 
     // Плейсхолдер для демонстрации динамического обновления состояния кнопок.
     public ICommand ToggleDocumentStateCommand { get; }
@@ -122,6 +129,20 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool IsUnderlineActive
+    {
+        get => _isUnderlineActive;
+        private set
+        {
+            if (_isUnderlineActive == value)
+            {
+                return;
+            }
+
+            _isUnderlineActive = value;
+            OnPropertyChanged();
+        }
+    }
 
     public bool IsBoldAtCursor
     {
@@ -198,6 +219,7 @@ public class MainViewModel : INotifyPropertyChanged
         _saveCommand.RaiseCanExecuteChanged();
         _boldCommand.RaiseCanExecuteChanged();
         _italicCommand.RaiseCanExecuteChanged();
+        _underlineCommand.RaiseCanExecuteChanged();
     }
 
     private void ExecuteBold()
@@ -220,10 +242,17 @@ public class MainViewModel : INotifyPropertyChanged
         ExecuteAction("Переключить курсив");
     }
 
+    private void ExecuteUnderline()
+    {
+        _editorService?.ToggleUnderline();
+        ExecuteAction("Переключить подчеркивание");
+    }
+
     private void UpdateTextFormattingStateFromEditor()
     {
         IsBoldActive = _editorService?.IsBoldActive == true;
         IsItalicActive = _editorService?.IsItalicActive == true;
+        IsUnderlineActive = _editorService?.IsUnderlineActive == true;
     }
 
     private void SetDebugStateField(ref bool field, bool value, [CallerMemberName] string? propertyName = null)

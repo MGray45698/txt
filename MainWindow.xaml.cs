@@ -78,6 +78,16 @@ public partial class MainWindow : Window
             }
         }
 
+        public bool IsUnderlineActive
+        {
+            get
+            {
+                var value = _editor.Selection.GetPropertyValue(Inline.TextDecorationsProperty);
+                var decorations = value as TextDecorationCollection;
+                return decorations?.Any(x => x.Location == TextDecorationLocation.Underline) == true;
+            }
+        }
+
         public void ToggleBold()
         {
             if (!CanEdit)
@@ -98,6 +108,33 @@ public partial class MainWindow : Window
             }
 
             EditingCommands.ToggleItalic.Execute(null, _editor);
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
+
+        public void ToggleUnderline()
+        {
+            if (!CanEdit)
+            {
+                return;
+            }
+
+            var value = _editor.Selection.GetPropertyValue(Inline.TextDecorationsProperty);
+            var currentDecorations = value as TextDecorationCollection ?? new TextDecorationCollection();
+            var hasUnderline = currentDecorations.Any(x => x.Location == TextDecorationLocation.Underline);
+
+            var nextDecorations = new TextDecorationCollection();
+            foreach (var decoration in currentDecorations.Where(x => x.Location != TextDecorationLocation.Underline))
+            {
+                nextDecorations.Add(decoration.Clone());
+            }
+
+            if (!hasUnderline)
+            {
+                nextDecorations.Add(TextDecorations.Underline[0].Clone());
+            }
+
+            _editor.Selection.ApplyPropertyValue(Inline.TextDecorationsProperty, nextDecorations);
             FormattingStateChanged?.Invoke();
             _editor.Focus();
         }
