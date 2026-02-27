@@ -84,23 +84,41 @@ public partial class MainWindow : Window
 
         private readonly RichTextBox _editor;
         private bool _hasUnsavedChanges;
+        private bool _isApplyingTypographyRules;
         private string? _currentFilePath;
 
         public RichTextBoxEditorService(RichTextBox editor)
         {
             _editor = editor;
             _editor.SelectionChanged += (_, _) => FormattingStateChanged?.Invoke();
-            _editor.TextChanged += (_, _) =>
-            {
-                _hasUnsavedChanges = true;
-                FormattingStateChanged?.Invoke();
-            };
+            _editor.TextChanged += (_, _) => OnEditorTextChanged();
             _editor.AddHandler(Hyperlink.ClickEvent, new RoutedEventHandler(OnHyperlinkClick));
 
             _hasUnsavedChanges = false;
         }
 
         public event Action? FormattingStateChanged;
+
+        private void OnEditorTextChanged()
+        {
+            if (_isApplyingTypographyRules)
+            {
+                return;
+            }
+
+            _isApplyingTypographyRules = true;
+            try
+            {
+                ApplyTypographyRulesAroundCaret();
+            }
+            finally
+            {
+                _isApplyingTypographyRules = false;
+            }
+
+            _hasUnsavedChanges = true;
+            FormattingStateChanged?.Invoke();
+        }
 
         public bool CanEdit => _editor.IsEnabled && !_editor.IsReadOnly;
 
@@ -532,6 +550,152 @@ public partial class MainWindow : Window
             }
 
             _hasUnsavedChanges = true;
+        }
+
+        private void ApplyTypographyRulesAroundCaret()
+        {
+            var paragraph = _editor.CaretPosition.Paragraph;
+            if (paragraph is null || IsCodeParagraph(paragraph))
+            {
+                return;
+            }
+
+            var start = _editor.Selection.Start;
+            var end = _editor.Selection.End;
+
+            var changed = false;
+            foreach (var run in EnumerateRuns(paragraph.Inlines))
+            {
+                if (IsCodeRun(run))
+                {
+                    continue;
+                }
+
+                var processed = ApplyTypographyRules(run.Text);
+                if (!string.Equals(processed, run.Text, StringComparison.Ordinal))
+                {
+                    run.Text = processed;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                _editor.Selection.Select(start, end);
+            }
+        }
+
+        private static IEnumerable<Run> EnumerateRuns(InlineCollection inlines)
+        {
+            foreach (var inline in inlines)
+            {
+                switch (inline)
+                {
+                    case Run run:
+                        yield return run;
+                        break;
+                    case Span span:
+                        foreach (var nested in EnumerateRuns(span.Inlines))
+                        {
+                            yield return nested;
+                        }
+
+                        break;
+                }
+            }
+        }
+
+        private bool IsCodeParagraph(Paragraph paragraph)
+        {
+            if (paragraph.Tag as string == "CODE")
+            {
+                return true;
+            }
+
+            return IsCodeStyle(paragraph.Style);
+        }
+
+        private bool IsCodeRun(Run run)
+        {
+            if (run.Tag as string == "CODE")
+            {
+                return true;
+            }
+
+            if (run.Parent is Paragraph paragraph && IsCodeParagraph(paragraph))
+            {
+                return true;
+            }
+
+            return IsCodeStyle(run.Style);
+        }
+
+        private bool IsCodeStyle(Style? style)
+        {
+            if (style is null)
+            {
+                return false;
+            }
+
+            return _editor.Document.Resources.Contains("Code")
+                && _editor.Document.Resources["Code"] is Style codeStyle
+                && ReferenceEquals(style, codeStyle);
+        }
+
+        private static string ApplyTypographyRules(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return text;
+            }
+
+            // Правило 1: заменяем дефис на тире только в текстовых конструкциях, но не в числовых диапазонах (10-12, 10 - 12).
+            var dashNormalized = System.Text.RegularExpressions.Regex.Replace(text, @"(?<!\d)\s-\s(?!\d)", " — ");
+            dashNormalized = System.Text.RegularExpressions.Regex.Replace(dashNormalized, @"(?<!\d)--(?!\d)", "—");
+
+            // Правило 2: вложенные кавычки по схеме «уровень 1 “уровень 2” уровень 1».
+            return NormalizeNestedQuotes(dashNormalized);
+        }
+
+        private static string NormalizeNestedQuotes(string input)
+        {
+            var result = new System.Text.StringBuilder(input.Length);
+            var level = 0;
+
+            for (var i = 0; i < input.Length; i++)
+            {
+                var ch = input[i];
+                if (ch != '"')
+                {
+                    result.Append(ch);
+                    continue;
+                }
+
+                var prev = i > 0 ? input[i - 1] : '\0';
+                var next = i + 1 < input.Length ? input[i + 1] : '\0';
+                var isOpening = i == 0 || char.IsWhiteSpace(prev) || "([{<«—".Contains(prev);
+                var isClosing = i == input.Length - 1 || char.IsWhiteSpace(next) || ")]}>.,;:!?»".Contains(next);
+
+                if (isOpening && !isClosing)
+                {
+                    level++;
+                    result.Append(level <= 1 ? '«' : '“');
+                    continue;
+                }
+
+                if (level > 0)
+                {
+                    result.Append(level <= 1 ? '»' : '”');
+                    level--;
+                }
+                else
+                {
+                    result.Append('«');
+                    level = 1;
+                }
+            }
+
+            return result.ToString();
         }
 
         private static int? TryExtractId(string? uri, string prefix)
