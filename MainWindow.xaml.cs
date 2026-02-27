@@ -64,6 +64,8 @@ public partial class MainWindow : Window
 
         public bool CanUndo => _editor.CanUndo;
 
+        public bool CanRedo => _editor.CanRedo;
+
         public bool IsBoldActive =>
             _editor.Selection.GetPropertyValue(TextElement.FontWeightProperty) is FontWeight fontWeight
             && fontWeight == FontWeights.Bold;
@@ -103,6 +105,18 @@ public partial class MainWindow : Window
             }
 
             _editor.Undo();
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
+
+        public void Redo()
+        {
+            if (!CanEdit || !CanRedo)
+            {
+                return;
+            }
+
+            _editor.Redo();
             FormattingStateChanged?.Invoke();
             _editor.Focus();
         }

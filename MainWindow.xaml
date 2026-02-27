@@ -13,6 +13,8 @@
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewCommand}" />
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
         <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding RedoCommand}" />
         <KeyBinding Key="B" Modifiers="Control" Command="{Binding BoldCommand}" />
         <KeyBinding Key="I" Modifiers="Control" Command="{Binding ItalicCommand}" />
         <KeyBinding Key="U" Modifiers="Control" Command="{Binding UnderlineCommand}" />
@@ -28,6 +30,7 @@
                 <Button Content="New" Command="{Binding NewCommand}" ToolTip="Ctrl+N" />
                 <Button Content="Save" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 <Button Content="↶" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z" />
+                <Button Content="↷" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y / Ctrl+Shift+Z" />
                 <Separator />
                 <ToggleButton Content="B"
                               Width="32"
@@ -81,6 +84,10 @@
             <Separator />
             <StatusBarItem>
                 <TextBlock Text="{Binding UndoStateLabel}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding RedoStateLabel}" />
             </StatusBarItem>
             <Separator />
             <StatusBarItem>

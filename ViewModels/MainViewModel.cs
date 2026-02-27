@@ -12,6 +12,7 @@ public interface ITextEditorService
 
     bool CanEdit { get; }
     bool CanUndo { get; }
+    bool CanRedo { get; }
     bool IsBoldActive { get; }
     bool IsItalicActive { get; }
     bool IsUnderlineActive { get; }
@@ -19,6 +20,7 @@ public interface ITextEditorService
     TextAlignment CurrentParagraphAlignment { get; }
 
     void Undo();
+    void Redo();
     void ToggleBold();
     void ToggleItalic();
     void ToggleUnderline();
@@ -40,6 +42,7 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _newCommand;
     private readonly RelayCommand _saveCommand;
     private readonly RelayCommand _undoCommand;
+    private readonly RelayCommand _redoCommand;
     private readonly RelayCommand _boldCommand;
     private readonly RelayCommand _italicCommand;
     private readonly RelayCommand _underlineCommand;
@@ -56,12 +59,14 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isAlignCenterActive;
     private bool _isAlignRightActive;
     private bool _canUndo;
+    private bool _canRedo;
 
     public MainViewModel()
     {
         _newCommand = new RelayCommand(_ => ExecuteAction("Создать новый документ"));
         _saveCommand = new RelayCommand(_ => ExecuteAction("Сохранить документ"), _ => IsDocumentLoaded);
         _undoCommand = new RelayCommand(_ => ExecuteUndo(), _ => CanExecuteUndo());
+        _redoCommand = new RelayCommand(_ => ExecuteRedo(), _ => CanExecuteRedo());
         _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
         _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
         _underlineCommand = new RelayCommand(_ => ExecuteUnderline(), _ => CanExecuteTextFormat());
@@ -73,6 +78,7 @@ public class MainViewModel : INotifyPropertyChanged
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
         UndoCommand = _undoCommand;
+        RedoCommand = _redoCommand;
         BoldCommand = _boldCommand;
         ItalicCommand = _italicCommand;
         UnderlineCommand = _underlineCommand;
@@ -88,6 +94,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand NewCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand UndoCommand { get; }
+    public ICommand RedoCommand { get; }
     public ICommand BoldCommand { get; }
     public ICommand ItalicCommand { get; }
     public ICommand UnderlineCommand { get; }
@@ -114,6 +121,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     public string UndoStateLabel => CanUndo ? "Undo доступен" : "Undo недоступен";
+    public string RedoStateLabel => CanRedo ? "Redo доступен" : "Redo недоступен";
 
     public bool IsDocumentLoaded
     {
@@ -145,6 +153,22 @@ public class MainViewModel : INotifyPropertyChanged
             _canUndo = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(UndoStateLabel));
+        }
+    }
+
+    public bool CanRedo
+    {
+        get => _canRedo;
+        private set
+        {
+            if (_canRedo == value)
+            {
+                return;
+            }
+
+            _canRedo = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(RedoStateLabel));
         }
     }
 
@@ -264,6 +288,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _saveCommand.RaiseCanExecuteChanged();
         _undoCommand.RaiseCanExecuteChanged();
+        _redoCommand.RaiseCanExecuteChanged();
         _boldCommand.RaiseCanExecuteChanged();
         _italicCommand.RaiseCanExecuteChanged();
         _underlineCommand.RaiseCanExecuteChanged();
@@ -280,6 +305,14 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private bool CanExecuteUndo() => IsDocumentLoaded && _editorService?.CanUndo == true;
+
+    private void ExecuteRedo()
+    {
+        _editorService?.Redo();
+        ExecuteAction("Повтор действия");
+    }
+
+    private bool CanExecuteRedo() => IsDocumentLoaded && _editorService?.CanRedo == true;
 
     private void ExecuteBold()
     {
@@ -338,6 +371,7 @@ public class MainViewModel : INotifyPropertyChanged
         IsUnderlineActive = _editorService?.IsUnderlineActive == true;
         IsStrikethroughActive = _editorService?.IsStrikethroughActive == true;
         CanUndo = _editorService?.CanUndo == true;
+        CanRedo = _editorService?.CanRedo == true;
 
         var alignment = _editorService?.CurrentParagraphAlignment ?? TextAlignment.Left;
         IsAlignLeftActive = alignment == TextAlignment.Left;
