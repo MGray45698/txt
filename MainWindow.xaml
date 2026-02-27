@@ -32,6 +32,7 @@
                 <Button Content="↶" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z" />
                 <Button Content="↷" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y / Ctrl+Shift+Z" />
                 <Button Content="[?]" Command="{Binding FootnoteCommand}" ToolTip="Вставить сноску" />
+                <Button Content="—" Command="{Binding DividerCommand}" ToolTip="Вставить разделитель" />
                 <Separator />
                 <ToggleButton Content="B"
                               Width="32"
@@ -104,6 +105,14 @@
                          SelectionChanged="Editor_OnSelectionChanged"
                          PreviewKeyDown="Editor_OnPreviewKeyDown">
                 <FlowDocument>
+                    <FlowDocument.Resources>
+                        <Style x:Key="DividerStyle" TargetType="{x:Type Paragraph}">
+                            <Setter Property="TextAlignment" Value="Center" />
+                            <Setter Property="Foreground" Value="#8A8A8A" />
+                            <Setter Property="FontSize" Value="10" />
+                            <Setter Property="Margin" Value="0,8,0,8" />
+                        </Style>
+                    </FlowDocument.Resources>
                     <Paragraph>
                         <Run Text="Здесь будет редактируемый контент (FlowDocument)." />
                     </Paragraph>

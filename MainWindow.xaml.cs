@@ -51,14 +51,26 @@ public partial class MainWindow : Window
 
     private void Editor_OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Tab || DataContext is not MainViewModel viewModel)
+        if (DataContext is not MainViewModel viewModel)
         {
             return;
         }
 
-        var decrease = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
-        viewModel.ApplyParagraphIndent(decrease);
-        e.Handled = true;
+        if (e.Key == Key.Tab)
+        {
+            var decrease = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+            viewModel.ApplyParagraphIndent(decrease);
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Key is Key.Back or Key.Delete)
+        {
+            if (viewModel.ApplyAtomicDelete(e.Key))
+            {
+                e.Handled = true;
+            }
+        }
     }
 
     private sealed class RichTextBoxEditorService : ITextEditorService
@@ -67,6 +79,8 @@ public partial class MainWindow : Window
         private const string FootnotesHeaderText = "Сноски";
         private const string FootnoteNoteUriPrefix = "footnote-note://";
         private const string FootnoteRefUriPrefix = "footnote-ref://";
+        private const string DividerParagraphTag = "DIVIDER";
+        private const string DividerStyleKey = "DividerStyle";
 
         private readonly RichTextBox _editor;
         private bool _hasUnsavedChanges;
@@ -165,6 +179,111 @@ public partial class MainWindow : Window
             _editor.Selection.Select(start, end);
             FormattingStateChanged?.Invoke();
             _editor.Focus();
+        }
+
+        public void InsertDivider()
+        {
+            if (!CanEdit)
+            {
+                return;
+            }
+
+            var caretParagraph = _editor.CaretPosition.Paragraph;
+            var divider = new Paragraph(new Run("────────"))
+            {
+                Tag = DividerParagraphTag
+            };
+
+            if (_editor.Document.Resources[DividerStyleKey] is Style style)
+            {
+                divider.Style = style;
+            }
+
+            if (caretParagraph is null)
+            {
+                _editor.Document.Blocks.Add(divider);
+            }
+            else
+            {
+                _editor.Document.Blocks.InsertAfter(caretParagraph, divider);
+            }
+
+            var nextParagraph = new Paragraph();
+            _editor.Document.Blocks.InsertAfter(divider, nextParagraph);
+            _editor.CaretPosition = nextParagraph.ContentStart;
+            _editor.Selection.Select(_editor.CaretPosition, _editor.CaretPosition);
+
+            _hasUnsavedChanges = true;
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
+
+        public bool HandleAtomicDelete(Key key)
+        {
+            var selection = _editor.Selection;
+            if (!selection.IsEmpty)
+            {
+                return false;
+            }
+
+            var caret = _editor.CaretPosition;
+            var currentParagraph = caret.Paragraph;
+
+            if (IsDividerParagraph(currentParagraph))
+            {
+                RemoveDividerParagraph(currentParagraph!);
+                return true;
+            }
+
+            if (key == Key.Back && currentParagraph is not null)
+            {
+                var start = currentParagraph.ContentStart.GetInsertionPosition(LogicalDirection.Forward) ?? currentParagraph.ContentStart;
+                if (caret.CompareTo(start) == 0 && currentParagraph.PreviousBlock is Paragraph previous && IsDividerParagraph(previous))
+                {
+                    RemoveDividerParagraph(previous);
+                    return true;
+                }
+            }
+
+            if (key == Key.Delete && currentParagraph is not null)
+            {
+                var end = currentParagraph.ContentEnd.GetInsertionPosition(LogicalDirection.Backward) ?? currentParagraph.ContentEnd;
+                if (caret.CompareTo(end) == 0 && currentParagraph.NextBlock is Paragraph next && IsDividerParagraph(next))
+                {
+                    RemoveDividerParagraph(next);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsDividerParagraph(Paragraph? paragraph)
+        {
+            return paragraph?.Tag as string == DividerParagraphTag;
+        }
+
+        private void RemoveDividerParagraph(Paragraph dividerParagraph)
+        {
+            TextPointer targetPosition;
+            if (dividerParagraph.NextBlock is Paragraph next)
+            {
+                targetPosition = next.ContentStart.GetInsertionPosition(LogicalDirection.Forward) ?? next.ContentStart;
+            }
+            else if (dividerParagraph.PreviousBlock is Paragraph prev)
+            {
+                targetPosition = prev.ContentEnd.GetInsertionPosition(LogicalDirection.Backward) ?? prev.ContentEnd;
+            }
+            else
+            {
+                targetPosition = _editor.Document.ContentEnd;
+            }
+
+            _editor.Document.Blocks.Remove(dividerParagraph);
+            _editor.Selection.Select(targetPosition, targetPosition);
+            _editor.Focus();
+            _hasUnsavedChanges = true;
+            FormattingStateChanged?.Invoke();
         }
 
         public void InsertFootnote()

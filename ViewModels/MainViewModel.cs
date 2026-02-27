@@ -34,6 +34,8 @@ public interface ITextEditorService
     void DecreaseParagraphIndent();
     void InsertFootnote();
     void RenumberFootnotes();
+    void InsertDivider();
+    bool HandleAtomicDelete(Key key);
 }
 
 public class MainViewModel : INotifyPropertyChanged
@@ -54,6 +56,7 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _undoCommand;
     private readonly RelayCommand _redoCommand;
     private readonly RelayCommand _footnoteCommand;
+    private readonly RelayCommand _dividerCommand;
     private readonly RelayCommand _boldCommand;
     private readonly RelayCommand _italicCommand;
     private readonly RelayCommand _underlineCommand;
@@ -81,6 +84,7 @@ public class MainViewModel : INotifyPropertyChanged
         _undoCommand = new RelayCommand(_ => ExecuteUndo(), _ => CanExecuteUndo());
         _redoCommand = new RelayCommand(_ => ExecuteRedo(), _ => CanExecuteRedo());
         _footnoteCommand = new RelayCommand(_ => ExecuteFootnote(), _ => CanExecuteTextFormat());
+        _dividerCommand = new RelayCommand(_ => ExecuteDivider(), _ => CanExecuteTextFormat());
         _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
         _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
         _underlineCommand = new RelayCommand(_ => ExecuteUnderline(), _ => CanExecuteTextFormat());
@@ -94,6 +98,7 @@ public class MainViewModel : INotifyPropertyChanged
         UndoCommand = _undoCommand;
         RedoCommand = _redoCommand;
         FootnoteCommand = _footnoteCommand;
+        DividerCommand = _dividerCommand;
         BoldCommand = _boldCommand;
         ItalicCommand = _italicCommand;
         UnderlineCommand = _underlineCommand;
@@ -111,6 +116,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand UndoCommand { get; }
     public ICommand RedoCommand { get; }
     public ICommand FootnoteCommand { get; }
+    public ICommand DividerCommand { get; }
     public ICommand BoldCommand { get; }
     public ICommand ItalicCommand { get; }
     public ICommand UnderlineCommand { get; }
@@ -344,6 +350,11 @@ public class MainViewModel : INotifyPropertyChanged
         ExecuteAction("Увеличить отступ первой строки");
     }
 
+    public bool ApplyAtomicDelete(Key key)
+    {
+        return _editorService?.HandleAtomicDelete(key) == true;
+    }
+
     public void AttachEditorService(ITextEditorService editorService)
     {
         _editorService = editorService;
@@ -363,6 +374,7 @@ public class MainViewModel : INotifyPropertyChanged
         _undoCommand.RaiseCanExecuteChanged();
         _redoCommand.RaiseCanExecuteChanged();
         _footnoteCommand.RaiseCanExecuteChanged();
+        _dividerCommand.RaiseCanExecuteChanged();
         _boldCommand.RaiseCanExecuteChanged();
         _italicCommand.RaiseCanExecuteChanged();
         _underlineCommand.RaiseCanExecuteChanged();
@@ -406,6 +418,12 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _editorService?.InsertFootnote();
         ExecuteAction("Вставить сноску");
+    }
+
+    private void ExecuteDivider()
+    {
+        _editorService?.InsertDivider();
+        ExecuteAction("Вставить разделитель");
     }
 
     private void ExecuteBold()
