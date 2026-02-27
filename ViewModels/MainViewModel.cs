@@ -11,8 +11,10 @@ public interface ITextEditorService
 
     bool CanEdit { get; }
     bool IsBoldActive { get; }
+    bool IsItalicActive { get; }
 
     void ToggleBold();
+    void ToggleItalic();
 }
 
 public class MainViewModel : INotifyPropertyChanged
@@ -29,18 +31,22 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _newCommand;
     private readonly RelayCommand _saveCommand;
     private readonly RelayCommand _boldCommand;
+    private readonly RelayCommand _italicCommand;
     private ITextEditorService? _editorService;
     private bool _isBoldActive;
+    private bool _isItalicActive;
 
     public MainViewModel()
     {
         _newCommand = new RelayCommand(_ => ExecuteAction("Создать новый документ"));
         _saveCommand = new RelayCommand(_ => ExecuteAction("Сохранить документ"), _ => IsDocumentLoaded);
-        _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteBold());
+        _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
+        _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
 
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
         BoldCommand = _boldCommand;
+        ItalicCommand = _italicCommand;
         ToggleDocumentStateCommand = new RelayCommand(_ => IsDocumentLoaded = !IsDocumentLoaded);
     }
 
@@ -49,6 +55,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand NewCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand BoldCommand { get; }
+    public ICommand ItalicCommand { get; }
 
     // Плейсхолдер для демонстрации динамического обновления состояния кнопок.
     public ICommand ToggleDocumentStateCommand { get; }
@@ -99,6 +106,22 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
         }
     }
+
+    public bool IsItalicActive
+    {
+        get => _isItalicActive;
+        private set
+        {
+            if (_isItalicActive == value)
+            {
+                return;
+            }
+
+            _isItalicActive = value;
+            OnPropertyChanged();
+        }
+    }
+
 
     public bool IsBoldAtCursor
     {
@@ -161,7 +184,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _editorService = editorService;
         _editorService.FormattingStateChanged += OnEditorFormattingChanged;
-        UpdateBoldStateFromEditor();
+        UpdateTextFormattingStateFromEditor();
         UpdateCommandStates();
     }
 
@@ -174,6 +197,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _saveCommand.RaiseCanExecuteChanged();
         _boldCommand.RaiseCanExecuteChanged();
+        _italicCommand.RaiseCanExecuteChanged();
     }
 
     private void ExecuteBold()
@@ -182,17 +206,24 @@ public class MainViewModel : INotifyPropertyChanged
         ExecuteAction("Переключить жирный текст");
     }
 
-    private bool CanExecuteBold() => IsDocumentLoaded && _editorService?.CanEdit == true;
+    private bool CanExecuteTextFormat() => IsDocumentLoaded && _editorService?.CanEdit == true;
 
     private void OnEditorFormattingChanged()
     {
-        UpdateBoldStateFromEditor();
+        UpdateTextFormattingStateFromEditor();
         UpdateCommandStates();
     }
 
-    private void UpdateBoldStateFromEditor()
+    private void ExecuteItalic()
+    {
+        _editorService?.ToggleItalic();
+        ExecuteAction("Переключить курсив");
+    }
+
+    private void UpdateTextFormattingStateFromEditor()
     {
         IsBoldActive = _editorService?.IsBoldActive == true;
+        IsItalicActive = _editorService?.IsItalicActive == true;
     }
 
     private void SetDebugStateField(ref bool field, bool value, [CallerMemberName] string? propertyName = null)

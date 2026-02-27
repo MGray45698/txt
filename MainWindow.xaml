@@ -13,6 +13,7 @@
         <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewCommand}" />
         <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
         <KeyBinding Key="B" Modifiers="Control" Command="{Binding BoldCommand}" />
+        <KeyBinding Key="I" Modifiers="Control" Command="{Binding ItalicCommand}" />
     </Window.InputBindings>
 
     <DockPanel LastChildFill="True">
@@ -26,6 +27,11 @@
                               Command="{Binding BoldCommand}"
                               IsChecked="{Binding IsBoldActive, Mode=OneWay}"
                               ToolTip="Ctrl+B" />
+                <ToggleButton Content="I"
+                              Width="32"
+                              Command="{Binding ItalicCommand}"
+                              IsChecked="{Binding IsItalicActive, Mode=OneWay}"
+                              ToolTip="Ctrl+I" />
                 <Separator />
                 <Button Content="Toggle state" Command="{Binding ToggleDocumentStateCommand}" />
             </ToolBar>

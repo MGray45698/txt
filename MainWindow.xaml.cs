@@ -69,6 +69,15 @@ public partial class MainWindow : Window
             }
         }
 
+        public bool IsItalicActive
+        {
+            get
+            {
+                var value = _editor.Selection.GetPropertyValue(TextElement.FontStyleProperty);
+                return value is FontStyle fontStyle && fontStyle == FontStyles.Italic;
+            }
+        }
+
         public void ToggleBold()
         {
             if (!CanEdit)
@@ -77,6 +86,18 @@ public partial class MainWindow : Window
             }
 
             EditingCommands.ToggleBold.Execute(null, _editor);
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
+
+        public void ToggleItalic()
+        {
+            if (!CanEdit)
+            {
+                return;
+            }
+
+            EditingCommands.ToggleItalic.Execute(null, _editor);
             FormattingStateChanged?.Invoke();
             _editor.Focus();
         }
