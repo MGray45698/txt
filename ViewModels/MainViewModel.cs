@@ -435,7 +435,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         else
         {
-            ExecuteAction($"Импорт DOCX отменён/ошибка: {message}");
+            ExecuteAction($"Импорт DOCX отменён/ошибка: {string.IsNullOrWhiteSpace(message) ? "без деталей" : message}");
         }
     }
 
@@ -447,7 +447,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         else
         {
-            ExecuteAction($"Экспорт отменён: {message}");
+            ExecuteAction($"Экспорт отменён: {string.IsNullOrWhiteSpace(message) ? "без деталей" : message}");
         }
     }
 

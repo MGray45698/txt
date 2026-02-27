@@ -127,13 +127,7 @@ public partial class MainWindow : Window
 
         if (_editorService.TryRestoreAutoSavedDocument(_autoSaveFilePath, out var error))
         {
-            ViewModel?.UpdateEditorDebugState(
-                isBold: false,
-                isItalic: false,
-                isUnderline: false,
-                isStrike: false,
-                paragraphAlignment: TextAlignment.Left.ToString(),
-                hasSelection: false);
+            Editor_OnSelectionChanged(EditorBox, new RoutedEventArgs());
             return;
         }
 
@@ -164,7 +158,7 @@ public partial class MainWindow : Window
 
     private void Editor_OnSelectionChanged(object sender, RoutedEventArgs e)
     {
-        if (sender is not RichTextBox editor || DataContext is not MainViewModel viewModel)
+        if (sender is not RichTextBox || DataContext is not MainViewModel viewModel)
         {
             return;
         }
