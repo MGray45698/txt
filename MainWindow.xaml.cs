@@ -49,8 +49,22 @@ public partial class MainWindow : Window
         viewModel.UpdateEditorDebugState(isBold, isItalic, isUnderline, isStrike, paragraphAlignment, hasSelection);
     }
 
+    private void Editor_OnPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Tab || DataContext is not MainViewModel viewModel)
+        {
+            return;
+        }
+
+        var decrease = (Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift;
+        viewModel.ApplyParagraphIndent(decrease);
+        e.Handled = true;
+    }
+
     private sealed class RichTextBoxEditorService : ITextEditorService
     {
+        private const double IndentStep = 24;
+
         private readonly RichTextBox _editor;
         private bool _hasUnsavedChanges;
         private string? _currentFilePath;
@@ -110,6 +124,44 @@ public partial class MainWindow : Window
 
         public TextAlignment CurrentParagraphAlignment =>
             _editor.Selection.Start.Paragraph?.TextAlignment ?? TextAlignment.Left;
+
+
+        public void IncreaseParagraphIndent()
+        {
+            ApplyParagraphIndent(change: IndentStep);
+        }
+
+        public void DecreaseParagraphIndent()
+        {
+            ApplyParagraphIndent(change: -IndentStep);
+        }
+
+        private void ApplyParagraphIndent(double change)
+        {
+            if (!CanEdit)
+            {
+                return;
+            }
+
+            var selection = _editor.Selection;
+            var start = selection.Start;
+            var end = selection.End;
+
+            var paragraphs = EnumerateSelectedParagraphs(selection).ToList();
+            if (paragraphs.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var paragraph in paragraphs)
+            {
+                paragraph.TextIndent = Math.Max(0, paragraph.TextIndent + change);
+            }
+
+            _editor.Selection.Select(start, end);
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
 
         public bool SaveDocument()
         {

@@ -30,6 +30,8 @@ public interface ITextEditorService
     void ToggleUnderline();
     void ToggleStrikethrough();
     void SetParagraphAlignment(TextAlignment alignment);
+    void IncreaseParagraphIndent();
+    void DecreaseParagraphIndent();
 }
 
 public class MainViewModel : INotifyPropertyChanged
@@ -320,6 +322,20 @@ public class MainViewModel : INotifyPropertyChanged
         IsStrikeAtCursor = isStrike;
         ParagraphAlignment = paragraphAlignment;
         HasSelection = hasSelection;
+    }
+
+
+    public void ApplyParagraphIndent(bool decrease)
+    {
+        if (decrease)
+        {
+            _editorService?.DecreaseParagraphIndent();
+            ExecuteAction("Уменьшить отступ первой строки");
+            return;
+        }
+
+        _editorService?.IncreaseParagraphIndent();
+        ExecuteAction("Увеличить отступ первой строки");
     }
 
     public void AttachEditorService(ITextEditorService editorService)

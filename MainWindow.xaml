@@ -100,7 +100,8 @@
                          VerticalScrollBarVisibility="Auto"
                          AcceptsTab="True"
                          SpellCheck.IsEnabled="True"
-                         SelectionChanged="Editor_OnSelectionChanged">
+                         SelectionChanged="Editor_OnSelectionChanged"
+                         PreviewKeyDown="Editor_OnPreviewKeyDown">
                 <FlowDocument>
                     <Paragraph>
                         <Run Text="Здесь будет редактируемый контент (FlowDocument)." />
