@@ -11,12 +11,14 @@ public interface ITextEditorService
     event Action? FormattingStateChanged;
 
     bool CanEdit { get; }
+    bool CanUndo { get; }
     bool IsBoldActive { get; }
     bool IsItalicActive { get; }
     bool IsUnderlineActive { get; }
     bool IsStrikethroughActive { get; }
     TextAlignment CurrentParagraphAlignment { get; }
 
+    void Undo();
     void ToggleBold();
     void ToggleItalic();
     void ToggleUnderline();
@@ -37,6 +39,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private readonly RelayCommand _newCommand;
     private readonly RelayCommand _saveCommand;
+    private readonly RelayCommand _undoCommand;
     private readonly RelayCommand _boldCommand;
     private readonly RelayCommand _italicCommand;
     private readonly RelayCommand _underlineCommand;
@@ -52,11 +55,13 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isAlignLeftActive;
     private bool _isAlignCenterActive;
     private bool _isAlignRightActive;
+    private bool _canUndo;
 
     public MainViewModel()
     {
         _newCommand = new RelayCommand(_ => ExecuteAction("Создать новый документ"));
         _saveCommand = new RelayCommand(_ => ExecuteAction("Сохранить документ"), _ => IsDocumentLoaded);
+        _undoCommand = new RelayCommand(_ => ExecuteUndo(), _ => CanExecuteUndo());
         _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
         _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
         _underlineCommand = new RelayCommand(_ => ExecuteUnderline(), _ => CanExecuteTextFormat());
@@ -67,6 +72,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
+        UndoCommand = _undoCommand;
         BoldCommand = _boldCommand;
         ItalicCommand = _italicCommand;
         UnderlineCommand = _underlineCommand;
@@ -81,6 +87,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public ICommand NewCommand { get; }
     public ICommand SaveCommand { get; }
+    public ICommand UndoCommand { get; }
     public ICommand BoldCommand { get; }
     public ICommand ItalicCommand { get; }
     public ICommand UnderlineCommand { get; }
@@ -89,7 +96,6 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand AlignCenterCommand { get; }
     public ICommand AlignRightCommand { get; }
 
-    // Плейсхолдер для демонстрации динамического обновления состояния кнопок.
     public ICommand ToggleDocumentStateCommand { get; }
 
     public string StatusMessage
@@ -107,6 +113,8 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public string UndoStateLabel => CanUndo ? "Undo доступен" : "Undo недоступен";
+
     public bool IsDocumentLoaded
     {
         get => _isDocumentLoaded;
@@ -121,6 +129,22 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(DocumentStateLabel));
             UpdateCommandStates();
+        }
+    }
+
+    public bool CanUndo
+    {
+        get => _canUndo;
+        private set
+        {
+            if (_canUndo == value)
+            {
+                return;
+            }
+
+            _canUndo = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(UndoStateLabel));
         }
     }
 
@@ -239,6 +263,7 @@ public class MainViewModel : INotifyPropertyChanged
     private void UpdateCommandStates()
     {
         _saveCommand.RaiseCanExecuteChanged();
+        _undoCommand.RaiseCanExecuteChanged();
         _boldCommand.RaiseCanExecuteChanged();
         _italicCommand.RaiseCanExecuteChanged();
         _underlineCommand.RaiseCanExecuteChanged();
@@ -247,6 +272,14 @@ public class MainViewModel : INotifyPropertyChanged
         _alignCenterCommand.RaiseCanExecuteChanged();
         _alignRightCommand.RaiseCanExecuteChanged();
     }
+
+    private void ExecuteUndo()
+    {
+        _editorService?.Undo();
+        ExecuteAction("Отмена действия");
+    }
+
+    private bool CanExecuteUndo() => IsDocumentLoaded && _editorService?.CanUndo == true;
 
     private void ExecuteBold()
     {
@@ -304,6 +337,7 @@ public class MainViewModel : INotifyPropertyChanged
         IsItalicActive = _editorService?.IsItalicActive == true;
         IsUnderlineActive = _editorService?.IsUnderlineActive == true;
         IsStrikethroughActive = _editorService?.IsStrikethroughActive == true;
+        CanUndo = _editorService?.CanUndo == true;
 
         var alignment = _editorService?.CurrentParagraphAlignment ?? TextAlignment.Left;
         IsAlignLeftActive = alignment == TextAlignment.Left;

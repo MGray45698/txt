@@ -55,11 +55,14 @@ public partial class MainWindow : Window
         {
             _editor = editor;
             _editor.SelectionChanged += (_, _) => FormattingStateChanged?.Invoke();
+            _editor.TextChanged += (_, _) => FormattingStateChanged?.Invoke();
         }
 
         public event Action? FormattingStateChanged;
 
         public bool CanEdit => _editor.IsEnabled && !_editor.IsReadOnly;
+
+        public bool CanUndo => _editor.CanUndo;
 
         public bool IsBoldActive =>
             _editor.Selection.GetPropertyValue(TextElement.FontWeightProperty) is FontWeight fontWeight
@@ -91,6 +94,18 @@ public partial class MainWindow : Window
 
         public TextAlignment CurrentParagraphAlignment =>
             _editor.Selection.Start.Paragraph?.TextAlignment ?? TextAlignment.Left;
+
+        public void Undo()
+        {
+            if (!CanEdit || !CanUndo)
+            {
+                return;
+            }
+
+            _editor.Undo();
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
 
         public void ToggleBold()
         {
