@@ -5,6 +5,16 @@ using TxtEditorSkeleton.Commands;
 
 namespace TxtEditorSkeleton.ViewModels;
 
+public interface ITextEditorService
+{
+    event Action? FormattingStateChanged;
+
+    bool CanEdit { get; }
+    bool IsBoldActive { get; }
+
+    void ToggleBold();
+}
+
 public class MainViewModel : INotifyPropertyChanged
 {
     private string _statusMessage = "Готово";
@@ -19,12 +29,14 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _newCommand;
     private readonly RelayCommand _saveCommand;
     private readonly RelayCommand _boldCommand;
+    private ITextEditorService? _editorService;
+    private bool _isBoldActive;
 
     public MainViewModel()
     {
         _newCommand = new RelayCommand(_ => ExecuteAction("Создать новый документ"));
         _saveCommand = new RelayCommand(_ => ExecuteAction("Сохранить документ"), _ => IsDocumentLoaded);
-        _boldCommand = new RelayCommand(_ => ExecuteAction("Переключить жирный текст"), _ => IsDocumentLoaded);
+        _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteBold());
 
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
@@ -70,6 +82,21 @@ public class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(DocumentStateLabel));
             UpdateCommandStates();
+        }
+    }
+
+    public bool IsBoldActive
+    {
+        get => _isBoldActive;
+        private set
+        {
+            if (_isBoldActive == value)
+            {
+                return;
+            }
+
+            _isBoldActive = value;
+            OnPropertyChanged();
         }
     }
 
@@ -130,6 +157,14 @@ public class MainViewModel : INotifyPropertyChanged
         HasSelection = hasSelection;
     }
 
+    public void AttachEditorService(ITextEditorService editorService)
+    {
+        _editorService = editorService;
+        _editorService.FormattingStateChanged += OnEditorFormattingChanged;
+        UpdateBoldStateFromEditor();
+        UpdateCommandStates();
+    }
+
     private void ExecuteAction(string actionName)
     {
         StatusMessage = $"{actionName} ({DateTime.Now:HH:mm:ss})";
@@ -139,6 +174,25 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _saveCommand.RaiseCanExecuteChanged();
         _boldCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ExecuteBold()
+    {
+        _editorService?.ToggleBold();
+        ExecuteAction("Переключить жирный текст");
+    }
+
+    private bool CanExecuteBold() => IsDocumentLoaded && _editorService?.CanEdit == true;
+
+    private void OnEditorFormattingChanged()
+    {
+        UpdateBoldStateFromEditor();
+        UpdateCommandStates();
+    }
+
+    private void UpdateBoldStateFromEditor()
+    {
+        IsBoldActive = _editorService?.IsBoldActive == true;
     }
 
     private void SetDebugStateField(ref bool field, bool value, [CallerMemberName] string? propertyName = null)

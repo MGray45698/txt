@@ -21,7 +21,11 @@
                 <Button Content="New" Command="{Binding NewCommand}" ToolTip="Ctrl+N" />
                 <Button Content="Save" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 <Separator />
-                <Button Content="Bold" Command="{Binding BoldCommand}" ToolTip="Ctrl+B" />
+                <ToggleButton Content="B"
+                              Width="32"
+                              Command="{Binding BoldCommand}"
+                              IsChecked="{Binding IsBoldActive, Mode=OneWay}"
+                              ToolTip="Ctrl+B" />
                 <Separator />
                 <Button Content="Toggle state" Command="{Binding ToggleDocumentStateCommand}" />
             </ToolBar>
