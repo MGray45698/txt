@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -60,23 +61,13 @@ public partial class MainWindow : Window
 
         public bool CanEdit => _editor.IsEnabled && !_editor.IsReadOnly;
 
-        public bool IsBoldActive
-        {
-            get
-            {
-                var value = _editor.Selection.GetPropertyValue(TextElement.FontWeightProperty);
-                return value is FontWeight fontWeight && fontWeight == FontWeights.Bold;
-            }
-        }
+        public bool IsBoldActive =>
+            _editor.Selection.GetPropertyValue(TextElement.FontWeightProperty) is FontWeight fontWeight
+            && fontWeight == FontWeights.Bold;
 
-        public bool IsItalicActive
-        {
-            get
-            {
-                var value = _editor.Selection.GetPropertyValue(TextElement.FontStyleProperty);
-                return value is FontStyle fontStyle && fontStyle == FontStyles.Italic;
-            }
-        }
+        public bool IsItalicActive =>
+            _editor.Selection.GetPropertyValue(TextElement.FontStyleProperty) is FontStyle fontStyle
+            && fontStyle == FontStyles.Italic;
 
         public bool IsUnderlineActive
         {
@@ -97,6 +88,9 @@ public partial class MainWindow : Window
                 return decorations?.Any(x => x.Location == TextDecorationLocation.Strikethrough) == true;
             }
         }
+
+        public TextAlignment CurrentParagraphAlignment =>
+            _editor.Selection.Start.Paragraph?.TextAlignment ?? TextAlignment.Left;
 
         public void ToggleBold()
         {
@@ -149,7 +143,6 @@ public partial class MainWindow : Window
             _editor.Focus();
         }
 
-
         public void ToggleStrikethrough()
         {
             if (!CanEdit)
@@ -177,5 +170,53 @@ public partial class MainWindow : Window
             _editor.Focus();
         }
 
+        public void SetParagraphAlignment(TextAlignment alignment)
+        {
+            if (!CanEdit)
+            {
+                return;
+            }
+
+            var paragraphs = EnumerateSelectedParagraphs(_editor.Selection).ToList();
+            if (paragraphs.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var paragraph in paragraphs)
+            {
+                paragraph.TextAlignment = alignment;
+            }
+
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
+
+        private static IEnumerable<Paragraph> EnumerateSelectedParagraphs(TextSelection selection)
+        {
+            var startParagraph = selection.Start.Paragraph;
+            if (startParagraph is null)
+            {
+                yield break;
+            }
+
+            var endParagraph = selection.End.Paragraph ?? startParagraph;
+
+            Block? currentBlock = startParagraph;
+            while (currentBlock is not null)
+            {
+                if (currentBlock is Paragraph paragraph)
+                {
+                    yield return paragraph;
+                }
+
+                if (ReferenceEquals(currentBlock, endParagraph))
+                {
+                    yield break;
+                }
+
+                currentBlock = currentBlock.NextBlock;
+            }
+        }
     }
 }

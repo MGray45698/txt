@@ -16,6 +16,9 @@
         <KeyBinding Key="I" Modifiers="Control" Command="{Binding ItalicCommand}" />
         <KeyBinding Key="U" Modifiers="Control" Command="{Binding UnderlineCommand}" />
         <KeyBinding Key="X" Modifiers="Control+Shift" Command="{Binding StrikethroughCommand}" />
+        <KeyBinding Key="L" Modifiers="Control" Command="{Binding AlignLeftCommand}" />
+        <KeyBinding Key="E" Modifiers="Control" Command="{Binding AlignCenterCommand}" />
+        <KeyBinding Key="R" Modifiers="Control" Command="{Binding AlignRightCommand}" />
     </Window.InputBindings>
 
     <DockPanel LastChildFill="True">
@@ -44,6 +47,22 @@
                               Command="{Binding StrikethroughCommand}"
                               IsChecked="{Binding IsStrikethroughActive, Mode=OneWay}"
                               ToolTip="Ctrl+Shift+X" />
+                <Separator />
+                <ToggleButton Content="L"
+                              Width="32"
+                              Command="{Binding AlignLeftCommand}"
+                              IsChecked="{Binding IsAlignLeftActive, Mode=OneWay}"
+                              ToolTip="Ctrl+L" />
+                <ToggleButton Content="C"
+                              Width="32"
+                              Command="{Binding AlignCenterCommand}"
+                              IsChecked="{Binding IsAlignCenterActive, Mode=OneWay}"
+                              ToolTip="Ctrl+E" />
+                <ToggleButton Content="R"
+                              Width="32"
+                              Command="{Binding AlignRightCommand}"
+                              IsChecked="{Binding IsAlignRightActive, Mode=OneWay}"
+                              ToolTip="Ctrl+R" />
                 <Separator />
                 <Button Content="Toggle state" Command="{Binding ToggleDocumentStateCommand}" />
             </ToolBar>

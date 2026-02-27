@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Input;
 using TxtEditorSkeleton.Commands;
 
@@ -14,11 +15,13 @@ public interface ITextEditorService
     bool IsItalicActive { get; }
     bool IsUnderlineActive { get; }
     bool IsStrikethroughActive { get; }
+    TextAlignment CurrentParagraphAlignment { get; }
 
     void ToggleBold();
     void ToggleItalic();
     void ToggleUnderline();
     void ToggleStrikethrough();
+    void SetParagraphAlignment(TextAlignment alignment);
 }
 
 public class MainViewModel : INotifyPropertyChanged
@@ -38,11 +41,17 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _italicCommand;
     private readonly RelayCommand _underlineCommand;
     private readonly RelayCommand _strikethroughCommand;
+    private readonly RelayCommand _alignLeftCommand;
+    private readonly RelayCommand _alignCenterCommand;
+    private readonly RelayCommand _alignRightCommand;
     private ITextEditorService? _editorService;
     private bool _isBoldActive;
     private bool _isItalicActive;
     private bool _isUnderlineActive;
     private bool _isStrikethroughActive;
+    private bool _isAlignLeftActive;
+    private bool _isAlignCenterActive;
+    private bool _isAlignRightActive;
 
     public MainViewModel()
     {
@@ -52,6 +61,9 @@ public class MainViewModel : INotifyPropertyChanged
         _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
         _underlineCommand = new RelayCommand(_ => ExecuteUnderline(), _ => CanExecuteTextFormat());
         _strikethroughCommand = new RelayCommand(_ => ExecuteStrikethrough(), _ => CanExecuteTextFormat());
+        _alignLeftCommand = new RelayCommand(_ => ExecuteAlignLeft(), _ => CanExecuteTextFormat());
+        _alignCenterCommand = new RelayCommand(_ => ExecuteAlignCenter(), _ => CanExecuteTextFormat());
+        _alignRightCommand = new RelayCommand(_ => ExecuteAlignRight(), _ => CanExecuteTextFormat());
 
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
@@ -59,6 +71,9 @@ public class MainViewModel : INotifyPropertyChanged
         ItalicCommand = _italicCommand;
         UnderlineCommand = _underlineCommand;
         StrikethroughCommand = _strikethroughCommand;
+        AlignLeftCommand = _alignLeftCommand;
+        AlignCenterCommand = _alignCenterCommand;
+        AlignRightCommand = _alignRightCommand;
         ToggleDocumentStateCommand = new RelayCommand(_ => IsDocumentLoaded = !IsDocumentLoaded);
     }
 
@@ -70,6 +85,9 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand ItalicCommand { get; }
     public ICommand UnderlineCommand { get; }
     public ICommand StrikethroughCommand { get; }
+    public ICommand AlignLeftCommand { get; }
+    public ICommand AlignCenterCommand { get; }
+    public ICommand AlignRightCommand { get; }
 
     // Плейсхолдер для демонстрации динамического обновления состояния кнопок.
     public ICommand ToggleDocumentStateCommand { get; }
@@ -109,61 +127,43 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsBoldActive
     {
         get => _isBoldActive;
-        private set
-        {
-            if (_isBoldActive == value)
-            {
-                return;
-            }
-
-            _isBoldActive = value;
-            OnPropertyChanged();
-        }
+        private set => SetStateField(ref _isBoldActive, value);
     }
 
     public bool IsItalicActive
     {
         get => _isItalicActive;
-        private set
-        {
-            if (_isItalicActive == value)
-            {
-                return;
-            }
-
-            _isItalicActive = value;
-            OnPropertyChanged();
-        }
+        private set => SetStateField(ref _isItalicActive, value);
     }
 
     public bool IsUnderlineActive
     {
         get => _isUnderlineActive;
-        private set
-        {
-            if (_isUnderlineActive == value)
-            {
-                return;
-            }
-
-            _isUnderlineActive = value;
-            OnPropertyChanged();
-        }
+        private set => SetStateField(ref _isUnderlineActive, value);
     }
 
     public bool IsStrikethroughActive
     {
         get => _isStrikethroughActive;
-        private set
-        {
-            if (_isStrikethroughActive == value)
-            {
-                return;
-            }
+        private set => SetStateField(ref _isStrikethroughActive, value);
+    }
 
-            _isStrikethroughActive = value;
-            OnPropertyChanged();
-        }
+    public bool IsAlignLeftActive
+    {
+        get => _isAlignLeftActive;
+        private set => SetStateField(ref _isAlignLeftActive, value);
+    }
+
+    public bool IsAlignCenterActive
+    {
+        get => _isAlignCenterActive;
+        private set => SetStateField(ref _isAlignCenterActive, value);
+    }
+
+    public bool IsAlignRightActive
+    {
+        get => _isAlignRightActive;
+        private set => SetStateField(ref _isAlignRightActive, value);
     }
 
     public bool IsBoldAtCursor
@@ -243,6 +243,9 @@ public class MainViewModel : INotifyPropertyChanged
         _italicCommand.RaiseCanExecuteChanged();
         _underlineCommand.RaiseCanExecuteChanged();
         _strikethroughCommand.RaiseCanExecuteChanged();
+        _alignLeftCommand.RaiseCanExecuteChanged();
+        _alignCenterCommand.RaiseCanExecuteChanged();
+        _alignRightCommand.RaiseCanExecuteChanged();
     }
 
     private void ExecuteBold()
@@ -277,12 +280,46 @@ public class MainViewModel : INotifyPropertyChanged
         ExecuteAction("Переключить зачёркивание");
     }
 
+    private void ExecuteAlignLeft()
+    {
+        _editorService?.SetParagraphAlignment(TextAlignment.Left);
+        ExecuteAction("Выравнивание по левому краю");
+    }
+
+    private void ExecuteAlignCenter()
+    {
+        _editorService?.SetParagraphAlignment(TextAlignment.Center);
+        ExecuteAction("Выравнивание по центру");
+    }
+
+    private void ExecuteAlignRight()
+    {
+        _editorService?.SetParagraphAlignment(TextAlignment.Right);
+        ExecuteAction("Выравнивание по правому краю");
+    }
+
     private void UpdateTextFormattingStateFromEditor()
     {
         IsBoldActive = _editorService?.IsBoldActive == true;
         IsItalicActive = _editorService?.IsItalicActive == true;
         IsUnderlineActive = _editorService?.IsUnderlineActive == true;
         IsStrikethroughActive = _editorService?.IsStrikethroughActive == true;
+
+        var alignment = _editorService?.CurrentParagraphAlignment ?? TextAlignment.Left;
+        IsAlignLeftActive = alignment == TextAlignment.Left;
+        IsAlignCenterActive = alignment == TextAlignment.Center;
+        IsAlignRightActive = alignment == TextAlignment.Right;
+    }
+
+    private void SetStateField(ref bool field, bool value, [CallerMemberName] string? propertyName = null)
+    {
+        if (field == value)
+        {
+            return;
+        }
+
+        field = value;
+        OnPropertyChanged(propertyName);
     }
 
     private void SetDebugStateField(ref bool field, bool value, [CallerMemberName] string? propertyName = null)
