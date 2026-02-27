@@ -1,0 +1,58 @@
+<Window x:Class="TxtEditorSkeleton.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="WPF Text Editor Skeleton"
+        Width="1000"
+        Height="700">
+
+    <Window.InputBindings>
+        <!-- Заготовки под горячие клавиши -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
+        <KeyBinding Key="B" Modifiers="Control" Command="{Binding BoldCommand}" />
+    </Window.InputBindings>
+
+    <DockPanel LastChildFill="True">
+        <ToolBarTray DockPanel.Dock="Top">
+            <ToolBar>
+                <Button Content="New" Command="{Binding NewCommand}" ToolTip="Ctrl+N" />
+                <Button Content="Save" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
+                <Separator />
+                <Button Content="Bold" Command="{Binding BoldCommand}" ToolTip="Ctrl+B" />
+                <Separator />
+                <Button Content="Toggle state" Command="{Binding ToggleDocumentStateCommand}" />
+            </ToolBar>
+        </ToolBarTray>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding DocumentStateLabel}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding DebugPanelText}" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="10">
+            <RichTextBox x:Name="EditorBox"
+                         VerticalScrollBarVisibility="Auto"
+                         AcceptsTab="True"
+                         SpellCheck.IsEnabled="True"
+                         SelectionChanged="Editor_OnSelectionChanged">
+                <FlowDocument>
+                    <Paragraph>
+                        <Run Text="Здесь будет редактируемый контент (FlowDocument)." />
+                    </Paragraph>
+                </FlowDocument>
+            </RichTextBox>
+        </Grid>
+    </DockPanel>
+</Window>
