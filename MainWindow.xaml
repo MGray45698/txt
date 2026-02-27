@@ -4,7 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
-        Title="WPF Text Editor Skeleton"
+        Title="{Binding WindowTitle}"
         Width="1000"
         Height="700">
 
@@ -28,7 +28,7 @@
         <ToolBarTray DockPanel.Dock="Top">
             <ToolBar>
                 <Button Content="New" Command="{Binding NewCommand}" ToolTip="Ctrl+N" />
-                <Button Content="Save" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
+                <Button Content="📄" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 <Button Content="↶" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z" />
                 <Button Content="↷" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y / Ctrl+Shift+Z" />
                 <Separator />

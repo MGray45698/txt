@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
@@ -13,12 +14,15 @@ public interface ITextEditorService
     bool CanEdit { get; }
     bool CanUndo { get; }
     bool CanRedo { get; }
+    bool HasUnsavedChanges { get; }
+    string? CurrentFilePath { get; }
     bool IsBoldActive { get; }
     bool IsItalicActive { get; }
     bool IsUnderlineActive { get; }
     bool IsStrikethroughActive { get; }
     TextAlignment CurrentParagraphAlignment { get; }
 
+    bool SaveDocument();
     void Undo();
     void Redo();
     void ToggleBold();
@@ -30,6 +34,8 @@ public interface ITextEditorService
 
 public class MainViewModel : INotifyPropertyChanged
 {
+    private const string BaseWindowTitle = "WPF Text Editor Skeleton";
+
     private string _statusMessage = "Готово";
     private bool _isDocumentLoaded = true;
     private bool _isBoldAtCursor;
@@ -60,11 +66,13 @@ public class MainViewModel : INotifyPropertyChanged
     private bool _isAlignRightActive;
     private bool _canUndo;
     private bool _canRedo;
+    private bool _hasUnsavedChanges;
+    private string? _currentFilePath;
 
     public MainViewModel()
     {
         _newCommand = new RelayCommand(_ => ExecuteAction("Создать новый документ"));
-        _saveCommand = new RelayCommand(_ => ExecuteAction("Сохранить документ"), _ => IsDocumentLoaded);
+        _saveCommand = new RelayCommand(_ => ExecuteSave(), _ => CanExecuteSave());
         _undoCommand = new RelayCommand(_ => ExecuteUndo(), _ => CanExecuteUndo());
         _redoCommand = new RelayCommand(_ => ExecuteRedo(), _ => CanExecuteRedo());
         _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
@@ -123,6 +131,17 @@ public class MainViewModel : INotifyPropertyChanged
     public string UndoStateLabel => CanUndo ? "Undo доступен" : "Undo недоступен";
     public string RedoStateLabel => CanRedo ? "Redo доступен" : "Redo недоступен";
 
+    public string WindowTitle
+    {
+        get
+        {
+            var filePart = string.IsNullOrWhiteSpace(CurrentFilePath)
+                ? BaseWindowTitle
+                : $"{Path.GetFileName(CurrentFilePath)} — {BaseWindowTitle}";
+            return HasUnsavedChanges ? $"{filePart} *" : filePart;
+        }
+    }
+
     public bool IsDocumentLoaded
     {
         get => _isDocumentLoaded;
@@ -169,6 +188,38 @@ public class MainViewModel : INotifyPropertyChanged
             _canRedo = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(RedoStateLabel));
+        }
+    }
+
+    public bool HasUnsavedChanges
+    {
+        get => _hasUnsavedChanges;
+        private set
+        {
+            if (_hasUnsavedChanges == value)
+            {
+                return;
+            }
+
+            _hasUnsavedChanges = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(WindowTitle));
+        }
+    }
+
+    public string? CurrentFilePath
+    {
+        get => _currentFilePath;
+        private set
+        {
+            if (_currentFilePath == value)
+            {
+                return;
+            }
+
+            _currentFilePath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(WindowTitle));
         }
     }
 
@@ -298,6 +349,20 @@ public class MainViewModel : INotifyPropertyChanged
         _alignRightCommand.RaiseCanExecuteChanged();
     }
 
+    private void ExecuteSave()
+    {
+        if (_editorService?.SaveDocument() == true)
+        {
+            ExecuteAction("Документ сохранён");
+        }
+        else
+        {
+            ExecuteAction("Сохранение отменено");
+        }
+    }
+
+    private bool CanExecuteSave() => IsDocumentLoaded && _editorService?.CanEdit == true;
+
     private void ExecuteUndo()
     {
         _editorService?.Undo();
@@ -372,6 +437,8 @@ public class MainViewModel : INotifyPropertyChanged
         IsStrikethroughActive = _editorService?.IsStrikethroughActive == true;
         CanUndo = _editorService?.CanUndo == true;
         CanRedo = _editorService?.CanRedo == true;
+        HasUnsavedChanges = _editorService?.HasUnsavedChanges == true;
+        CurrentFilePath = _editorService?.CurrentFilePath;
 
         var alignment = _editorService?.CurrentParagraphAlignment ?? TextAlignment.Left;
         IsAlignLeftActive = alignment == TextAlignment.Left;

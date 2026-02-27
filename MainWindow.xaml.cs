@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using Microsoft.Win32;
 using TxtEditorSkeleton.ViewModels;
 
 namespace TxtEditorSkeleton;
@@ -50,12 +52,20 @@ public partial class MainWindow : Window
     private sealed class RichTextBoxEditorService : ITextEditorService
     {
         private readonly RichTextBox _editor;
+        private bool _hasUnsavedChanges;
+        private string? _currentFilePath;
 
         public RichTextBoxEditorService(RichTextBox editor)
         {
             _editor = editor;
             _editor.SelectionChanged += (_, _) => FormattingStateChanged?.Invoke();
-            _editor.TextChanged += (_, _) => FormattingStateChanged?.Invoke();
+            _editor.TextChanged += (_, _) =>
+            {
+                _hasUnsavedChanges = true;
+                FormattingStateChanged?.Invoke();
+            };
+
+            _hasUnsavedChanges = false;
         }
 
         public event Action? FormattingStateChanged;
@@ -65,6 +75,10 @@ public partial class MainWindow : Window
         public bool CanUndo => _editor.CanUndo;
 
         public bool CanRedo => _editor.CanRedo;
+
+        public bool HasUnsavedChanges => _hasUnsavedChanges;
+
+        public string? CurrentFilePath => _currentFilePath;
 
         public bool IsBoldActive =>
             _editor.Selection.GetPropertyValue(TextElement.FontWeightProperty) is FontWeight fontWeight
@@ -96,6 +110,41 @@ public partial class MainWindow : Window
 
         public TextAlignment CurrentParagraphAlignment =>
             _editor.Selection.Start.Paragraph?.TextAlignment ?? TextAlignment.Left;
+
+        public bool SaveDocument()
+        {
+            if (!CanEdit)
+            {
+                return false;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Сохранить документ",
+                Filter = "RTF (*.rtf)|*.rtf|XAML Package (*.xamlpkg)|*.xamlpkg",
+                AddExtension = true,
+                OverwritePrompt = true,
+                FileName = string.IsNullOrWhiteSpace(_currentFilePath) ? "document" : Path.GetFileName(_currentFilePath)
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return false;
+            }
+
+            var dataFormat = dialog.FilterIndex == 2 ? DataFormats.XamlPackage : DataFormats.Rtf;
+            var textRange = new TextRange(_editor.Document.ContentStart, _editor.Document.ContentEnd);
+
+            using (var stream = new FileStream(dialog.FileName, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                textRange.Save(stream, dataFormat);
+            }
+
+            _currentFilePath = dialog.FileName;
+            _hasUnsavedChanges = false;
+            FormattingStateChanged?.Invoke();
+            return true;
+        }
 
         public void Undo()
         {
