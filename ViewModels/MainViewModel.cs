@@ -33,6 +33,7 @@ public interface ITextEditorService
     void IncreaseParagraphIndent();
     void DecreaseParagraphIndent();
     void InsertFootnote();
+    void RenumberFootnotes();
 }
 
 public class MainViewModel : INotifyPropertyChanged

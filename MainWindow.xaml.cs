@@ -190,7 +190,9 @@ public partial class MainWindow : Window
             };
             marker.Inlines.Add(new Run($"[{id}]"));
 
-            var footnoteParagraph = EnsureFootnoteParagraph(id);
+            RenumberFootnotes();
+            var normalizedId = TryExtractId(marker.NavigateUri?.ToString(), FootnoteNoteUriPrefix) ?? id;
+            var footnoteParagraph = FindFootnoteParagraphById(normalizedId) ?? EnsureFootnoteParagraph(normalizedId);
             var contentPointer = footnoteParagraph.ContentEnd.GetInsertionPosition(LogicalDirection.Backward)
                 ?? footnoteParagraph.ContentEnd;
             _editor.Selection.Select(contentPointer, contentPointer);
@@ -338,12 +340,170 @@ public partial class MainWindow : Window
             _editor.Focus();
         }
 
+        public void RenumberFootnotes()
+        {
+            var header = FindFootnotesHeaderParagraph();
+
+            var markerLinks = EnumerateHyperlinks(_editor.Document)
+                .Where(h => h.NavigateUri?.ToString().StartsWith(FootnoteNoteUriPrefix) == true)
+                .ToList();
+
+            var footnoteEntries = GetFootnoteEntryParagraphs(header).ToList();
+            var entryByOldId = footnoteEntries
+                .Select(p => new { Paragraph = p, Id = GetFootnoteParagraphId(p) })
+                .Where(x => x.Id is not null)
+                .GroupBy(x => x.Id!.Value)
+                .ToDictionary(g => g.Key, g => new Queue<Paragraph>(g.Select(x => x.Paragraph)));
+
+            var reorderedEntries = new List<Paragraph>();
+            var nextId = 1;
+
+            foreach (var marker in markerLinks)
+            {
+                var oldId = TryExtractId(marker.NavigateUri?.ToString(), FootnoteNoteUriPrefix);
+                UpdateMarkerLink(marker, nextId);
+
+                Paragraph? entry = null;
+                if (oldId is not null && entryByOldId.TryGetValue(oldId.Value, out var queue) && queue.Count > 0)
+                {
+                    entry = queue.Dequeue();
+                }
+
+                if (entry is null)
+                {
+                    entry = CreateFootnoteParagraph(nextId);
+                }
+                else
+                {
+                    UpdateFootnoteParagraphLink(entry, nextId);
+                }
+
+                reorderedEntries.Add(entry);
+                nextId++;
+            }
+
+            foreach (var paragraph in footnoteEntries)
+            {
+                _editor.Document.Blocks.Remove(paragraph);
+            }
+
+            if (reorderedEntries.Count == 0)
+            {
+                if (header is not null)
+                {
+                    _editor.Document.Blocks.Remove(header);
+                }
+
+                _hasUnsavedChanges = true;
+                return;
+            }
+
+            EnsureFootnotesSectionExists();
+            header = FindFootnotesHeaderParagraph();
+            if (header is null)
+            {
+                return;
+            }
+
+            Block insertAfter = header;
+            foreach (var paragraph in reorderedEntries)
+            {
+                _editor.Document.Blocks.InsertAfter(insertAfter, paragraph);
+                insertAfter = paragraph;
+            }
+
+            _hasUnsavedChanges = true;
+        }
+
+        private static int? TryExtractId(string? uri, string prefix)
+        {
+            if (string.IsNullOrWhiteSpace(uri) || !uri.StartsWith(prefix))
+            {
+                return null;
+            }
+
+            return int.TryParse(uri[prefix.Length..], out var id) ? id : null;
+        }
+
+        private static void UpdateMarkerLink(Hyperlink marker, int id)
+        {
+            marker.NavigateUri = new Uri($"{FootnoteNoteUriPrefix}{id}");
+            marker.Tag = id;
+            marker.Inlines.Clear();
+            marker.Inlines.Add(new Run($"[{id}]"));
+        }
+
+        private static Paragraph CreateFootnoteParagraph(int id)
+        {
+            var paragraph = new Paragraph();
+            var backLink = new Hyperlink(new Run($"[{id}] "))
+            {
+                NavigateUri = new Uri($"{FootnoteRefUriPrefix}{id}"),
+                Tag = id
+            };
+            paragraph.Inlines.Add(backLink);
+            paragraph.Inlines.Add(new Run("текст сноски"));
+            return paragraph;
+        }
+
+        private static void UpdateFootnoteParagraphLink(Paragraph paragraph, int id)
+        {
+            if (paragraph.Inlines.FirstInline is Hyperlink hyperlink)
+            {
+                hyperlink.NavigateUri = new Uri($"{FootnoteRefUriPrefix}{id}");
+                hyperlink.Tag = id;
+                hyperlink.Inlines.Clear();
+                hyperlink.Inlines.Add(new Run($"[{id}] "));
+                return;
+            }
+
+            paragraph.Inlines.InsertBefore(paragraph.Inlines.FirstInline, new Hyperlink(new Run($"[{id}] "))
+            {
+                NavigateUri = new Uri($"{FootnoteRefUriPrefix}{id}"),
+                Tag = id
+            });
+        }
+
+        private Paragraph? FindFootnoteParagraphById(int id)
+        {
+            var header = FindFootnotesHeaderParagraph();
+            return GetFootnoteEntryParagraphs(header)
+                .FirstOrDefault(p => GetFootnoteParagraphId(p) == id);
+        }
+
+        private IEnumerable<Paragraph> GetFootnoteEntryParagraphs(Paragraph? header)
+        {
+            if (header is null)
+            {
+                yield break;
+            }
+
+            var current = header.NextBlock;
+            while (current is Paragraph paragraph && IsFootnoteParagraph(paragraph))
+            {
+                yield return paragraph;
+                current = current.NextBlock;
+            }
+        }
+
+        private int? GetFootnoteParagraphId(Paragraph paragraph)
+        {
+            if (paragraph.Inlines.FirstInline is not Hyperlink hyperlink)
+            {
+                return null;
+            }
+
+            return TryExtractId(hyperlink.NavigateUri?.ToString(), FootnoteRefUriPrefix);
+        }
+
         public bool SaveDocument()
         {
             if (!CanEdit)
             {
                 return false;
             }
+
+            RenumberFootnotes();
 
             var dialog = new SaveFileDialog
             {
