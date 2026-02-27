@@ -31,6 +31,7 @@
                 <Button Content="📄" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
                 <Button Content="↶" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z" />
                 <Button Content="↷" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y / Ctrl+Shift+Z" />
+                <Button Content="[?]" Command="{Binding FootnoteCommand}" ToolTip="Вставить сноску" />
                 <Separator />
                 <ToggleButton Content="B"
                               Width="32"

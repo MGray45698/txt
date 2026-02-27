@@ -32,6 +32,7 @@ public interface ITextEditorService
     void SetParagraphAlignment(TextAlignment alignment);
     void IncreaseParagraphIndent();
     void DecreaseParagraphIndent();
+    void InsertFootnote();
 }
 
 public class MainViewModel : INotifyPropertyChanged
@@ -51,6 +52,7 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _saveCommand;
     private readonly RelayCommand _undoCommand;
     private readonly RelayCommand _redoCommand;
+    private readonly RelayCommand _footnoteCommand;
     private readonly RelayCommand _boldCommand;
     private readonly RelayCommand _italicCommand;
     private readonly RelayCommand _underlineCommand;
@@ -77,6 +79,7 @@ public class MainViewModel : INotifyPropertyChanged
         _saveCommand = new RelayCommand(_ => ExecuteSave(), _ => CanExecuteSave());
         _undoCommand = new RelayCommand(_ => ExecuteUndo(), _ => CanExecuteUndo());
         _redoCommand = new RelayCommand(_ => ExecuteRedo(), _ => CanExecuteRedo());
+        _footnoteCommand = new RelayCommand(_ => ExecuteFootnote(), _ => CanExecuteTextFormat());
         _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
         _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
         _underlineCommand = new RelayCommand(_ => ExecuteUnderline(), _ => CanExecuteTextFormat());
@@ -89,6 +92,7 @@ public class MainViewModel : INotifyPropertyChanged
         SaveCommand = _saveCommand;
         UndoCommand = _undoCommand;
         RedoCommand = _redoCommand;
+        FootnoteCommand = _footnoteCommand;
         BoldCommand = _boldCommand;
         ItalicCommand = _italicCommand;
         UnderlineCommand = _underlineCommand;
@@ -105,6 +109,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand SaveCommand { get; }
     public ICommand UndoCommand { get; }
     public ICommand RedoCommand { get; }
+    public ICommand FootnoteCommand { get; }
     public ICommand BoldCommand { get; }
     public ICommand ItalicCommand { get; }
     public ICommand UnderlineCommand { get; }
@@ -356,6 +361,7 @@ public class MainViewModel : INotifyPropertyChanged
         _saveCommand.RaiseCanExecuteChanged();
         _undoCommand.RaiseCanExecuteChanged();
         _redoCommand.RaiseCanExecuteChanged();
+        _footnoteCommand.RaiseCanExecuteChanged();
         _boldCommand.RaiseCanExecuteChanged();
         _italicCommand.RaiseCanExecuteChanged();
         _underlineCommand.RaiseCanExecuteChanged();
@@ -394,6 +400,12 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private bool CanExecuteRedo() => IsDocumentLoaded && _editorService?.CanRedo == true;
+
+    private void ExecuteFootnote()
+    {
+        _editorService?.InsertFootnote();
+        ExecuteAction("Вставить сноску");
+    }
 
     private void ExecuteBold()
     {

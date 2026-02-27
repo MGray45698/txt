@@ -64,6 +64,9 @@ public partial class MainWindow : Window
     private sealed class RichTextBoxEditorService : ITextEditorService
     {
         private const double IndentStep = 24;
+        private const string FootnotesHeaderText = "Сноски";
+        private const string FootnoteNoteUriPrefix = "footnote-note://";
+        private const string FootnoteRefUriPrefix = "footnote-ref://";
 
         private readonly RichTextBox _editor;
         private bool _hasUnsavedChanges;
@@ -78,6 +81,7 @@ public partial class MainWindow : Window
                 _hasUnsavedChanges = true;
                 FormattingStateChanged?.Invoke();
             };
+            _editor.AddHandler(Hyperlink.ClickEvent, new RoutedEventHandler(OnHyperlinkClick));
 
             _hasUnsavedChanges = false;
         }
@@ -160,6 +164,177 @@ public partial class MainWindow : Window
 
             _editor.Selection.Select(start, end);
             FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
+
+        public void InsertFootnote()
+        {
+            if (!CanEdit)
+            {
+                return;
+            }
+
+            var id = GetNextFootnoteId();
+            var insertionPosition = _editor.CaretPosition.GetInsertionPosition(LogicalDirection.Forward);
+            if (insertionPosition is null)
+            {
+                return;
+            }
+
+            var marker = new Hyperlink(insertionPosition, insertionPosition)
+            {
+                NavigateUri = new Uri($"{FootnoteNoteUriPrefix}{id}"),
+                BaselineAlignment = BaselineAlignment.Superscript,
+                FontSize = Math.Max(8, _editor.FontSize - 2),
+                Tag = id
+            };
+            marker.Inlines.Add(new Run($"[{id}]"));
+
+            var footnoteParagraph = EnsureFootnoteParagraph(id);
+            var contentPointer = footnoteParagraph.ContentEnd.GetInsertionPosition(LogicalDirection.Backward)
+                ?? footnoteParagraph.ContentEnd;
+            _editor.Selection.Select(contentPointer, contentPointer);
+            _editor.Focus();
+
+            _hasUnsavedChanges = true;
+            FormattingStateChanged?.Invoke();
+        }
+        private Paragraph EnsureFootnoteParagraph(int id)
+        {
+            EnsureFootnotesSectionExists();
+            var sectionStart = FindFootnotesHeaderParagraph();
+
+            var paragraph = new Paragraph();
+            var backLink = new Hyperlink(new Run($"[{id}] "))
+            {
+                NavigateUri = new Uri($"{FootnoteRefUriPrefix}{id}"),
+                Tag = id
+            };
+            paragraph.Inlines.Add(backLink);
+            paragraph.Inlines.Add(new Run("текст сноски"));
+
+            if (sectionStart is null)
+            {
+                _editor.Document.Blocks.Add(paragraph);
+                return paragraph;
+            }
+
+            Block insertAfter = sectionStart;
+            var current = sectionStart.NextBlock;
+            while (current is Paragraph p && IsFootnoteParagraph(p))
+            {
+                insertAfter = current;
+                current = current.NextBlock;
+            }
+
+            _editor.Document.Blocks.InsertAfter(insertAfter, paragraph);
+            return paragraph;
+        }
+
+        private bool IsFootnoteParagraph(Paragraph paragraph)
+        {
+            return paragraph.Inlines.FirstInline is Hyperlink hyperlink
+                && hyperlink.NavigateUri?.ToString().StartsWith(FootnoteRefUriPrefix) == true;
+        }
+
+        private void EnsureFootnotesSectionExists()
+        {
+            if (FindFootnotesHeaderParagraph() is not null)
+            {
+                return;
+            }
+
+            var heading = new Paragraph(new Run(FootnotesHeaderText))
+            {
+                FontWeight = FontWeights.SemiBold,
+                Margin = new Thickness(0, 18, 0, 6)
+            };
+            _editor.Document.Blocks.Add(heading);
+        }
+
+        private Paragraph? FindFootnotesHeaderParagraph()
+        {
+            return _editor.Document.Blocks
+                .OfType<Paragraph>()
+                .FirstOrDefault(p => new TextRange(p.ContentStart, p.ContentEnd).Text.Trim() == FootnotesHeaderText);
+        }
+
+        private int GetNextFootnoteId()
+        {
+            var maxId = 0;
+            foreach (var hyperlink in EnumerateHyperlinks(_editor.Document))
+            {
+                if (hyperlink.NavigateUri is null)
+                {
+                    continue;
+                }
+
+                var uri = hyperlink.NavigateUri.ToString();
+                if (!uri.StartsWith(FootnoteNoteUriPrefix))
+                {
+                    continue;
+                }
+
+                if (int.TryParse(uri[FootnoteNoteUriPrefix.Length..], out var id))
+                {
+                    maxId = Math.Max(maxId, id);
+                }
+            }
+
+            return maxId + 1;
+        }
+
+        private static IEnumerable<Hyperlink> EnumerateHyperlinks(FlowDocument document)
+        {
+            foreach (var paragraph in document.Blocks.OfType<Paragraph>())
+            {
+                foreach (var hyperlink in paragraph.Inlines.OfType<Hyperlink>())
+                {
+                    yield return hyperlink;
+                }
+            }
+        }
+
+        private void OnHyperlinkClick(object sender, RoutedEventArgs e)
+        {
+            var hyperlink = e.OriginalSource switch
+            {
+                Hyperlink direct => direct,
+                Run run => run.Parent as Hyperlink,
+                _ => null
+            };
+
+            if (hyperlink?.NavigateUri is null)
+            {
+                return;
+            }
+
+            var uri = hyperlink.NavigateUri.ToString();
+            if (uri.StartsWith(FootnoteNoteUriPrefix))
+            {
+                NavigateToHyperlink(FootnoteRefUriPrefix + uri[FootnoteNoteUriPrefix.Length..]);
+                e.Handled = true;
+                return;
+            }
+
+            if (uri.StartsWith(FootnoteRefUriPrefix))
+            {
+                NavigateToHyperlink(FootnoteNoteUriPrefix + uri[FootnoteRefUriPrefix.Length..]);
+                e.Handled = true;
+            }
+        }
+
+        private void NavigateToHyperlink(string targetUri)
+        {
+            var target = EnumerateHyperlinks(_editor.Document)
+                .FirstOrDefault(h => h.NavigateUri?.ToString() == targetUri);
+
+            if (target is null)
+            {
+                return;
+            }
+
+            _editor.Selection.Select(target.ContentStart, target.ContentEnd);
             _editor.Focus();
         }
 
