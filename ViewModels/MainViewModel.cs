@@ -26,12 +26,6 @@ public interface ITextEditorService
     bool CanRedo { get; }
     bool HasUnsavedChanges { get; }
     string? CurrentFilePath { get; }
-    bool IsBoldActive { get; }
-    bool IsItalicActive { get; }
-    bool IsUnderlineActive { get; }
-    bool IsStrikethroughActive { get; }
-    TextAlignment CurrentParagraphAlignment { get; }
-
     void ApplyInlineProperty(DependencyProperty property, object value);
     void ApplyParagraphProperty(Action<Paragraph> apply);
     EditorSelectionState GetSelectionState();
@@ -385,6 +379,11 @@ public class MainViewModel : INotifyPropertyChanged
 
     public void AttachEditorService(ITextEditorService editorService)
     {
+        if (_editorService is not null)
+        {
+            _editorService.FormattingStateChanged -= OnEditorFormattingChanged;
+        }
+
         _editorService = editorService;
         _editorService.FormattingStateChanged += OnEditorFormattingChanged;
         UpdateTextFormattingStateFromEditor();
@@ -436,7 +435,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         else
         {
-            ExecuteAction($"Импорт DOCX отменён/ошибка: {message ?? "без изменений"}");
+            ExecuteAction($"Импорт DOCX отменён/ошибка: {message}");
         }
     }
 
@@ -448,7 +447,7 @@ public class MainViewModel : INotifyPropertyChanged
         }
         else
         {
-            ExecuteAction($"Экспорт отменён: {message ?? "без изменений"}");
+            ExecuteAction($"Экспорт отменён: {message}");
         }
     }
 
