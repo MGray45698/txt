@@ -88,6 +88,16 @@ public partial class MainWindow : Window
             }
         }
 
+        public bool IsStrikethroughActive
+        {
+            get
+            {
+                var value = _editor.Selection.GetPropertyValue(Inline.TextDecorationsProperty);
+                var decorations = value as TextDecorationCollection;
+                return decorations?.Any(x => x.Location == TextDecorationLocation.Strikethrough) == true;
+            }
+        }
+
         public void ToggleBold()
         {
             if (!CanEdit)
@@ -138,5 +148,34 @@ public partial class MainWindow : Window
             FormattingStateChanged?.Invoke();
             _editor.Focus();
         }
+
+
+        public void ToggleStrikethrough()
+        {
+            if (!CanEdit)
+            {
+                return;
+            }
+
+            var value = _editor.Selection.GetPropertyValue(Inline.TextDecorationsProperty);
+            var currentDecorations = value as TextDecorationCollection ?? new TextDecorationCollection();
+            var hasStrikethrough = currentDecorations.Any(x => x.Location == TextDecorationLocation.Strikethrough);
+
+            var nextDecorations = new TextDecorationCollection();
+            foreach (var decoration in currentDecorations.Where(x => x.Location != TextDecorationLocation.Strikethrough))
+            {
+                nextDecorations.Add(decoration.Clone());
+            }
+
+            if (!hasStrikethrough)
+            {
+                nextDecorations.Add(TextDecorations.Strikethrough[0].Clone());
+            }
+
+            _editor.Selection.ApplyPropertyValue(Inline.TextDecorationsProperty, nextDecorations);
+            FormattingStateChanged?.Invoke();
+            _editor.Focus();
+        }
+
     }
 }

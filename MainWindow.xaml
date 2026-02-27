@@ -15,6 +15,7 @@
         <KeyBinding Key="B" Modifiers="Control" Command="{Binding BoldCommand}" />
         <KeyBinding Key="I" Modifiers="Control" Command="{Binding ItalicCommand}" />
         <KeyBinding Key="U" Modifiers="Control" Command="{Binding UnderlineCommand}" />
+        <KeyBinding Key="X" Modifiers="Control+Shift" Command="{Binding StrikethroughCommand}" />
     </Window.InputBindings>
 
     <DockPanel LastChildFill="True">
@@ -38,6 +39,11 @@
                               Command="{Binding UnderlineCommand}"
                               IsChecked="{Binding IsUnderlineActive, Mode=OneWay}"
                               ToolTip="Ctrl+U" />
+                <ToggleButton Content="S"
+                              Width="32"
+                              Command="{Binding StrikethroughCommand}"
+                              IsChecked="{Binding IsStrikethroughActive, Mode=OneWay}"
+                              ToolTip="Ctrl+Shift+X" />
                 <Separator />
                 <Button Content="Toggle state" Command="{Binding ToggleDocumentStateCommand}" />
             </ToolBar>

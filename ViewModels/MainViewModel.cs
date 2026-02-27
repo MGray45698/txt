@@ -13,10 +13,12 @@ public interface ITextEditorService
     bool IsBoldActive { get; }
     bool IsItalicActive { get; }
     bool IsUnderlineActive { get; }
+    bool IsStrikethroughActive { get; }
 
     void ToggleBold();
     void ToggleItalic();
     void ToggleUnderline();
+    void ToggleStrikethrough();
 }
 
 public class MainViewModel : INotifyPropertyChanged
@@ -35,10 +37,12 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly RelayCommand _boldCommand;
     private readonly RelayCommand _italicCommand;
     private readonly RelayCommand _underlineCommand;
+    private readonly RelayCommand _strikethroughCommand;
     private ITextEditorService? _editorService;
     private bool _isBoldActive;
     private bool _isItalicActive;
     private bool _isUnderlineActive;
+    private bool _isStrikethroughActive;
 
     public MainViewModel()
     {
@@ -47,12 +51,14 @@ public class MainViewModel : INotifyPropertyChanged
         _boldCommand = new RelayCommand(_ => ExecuteBold(), _ => CanExecuteTextFormat());
         _italicCommand = new RelayCommand(_ => ExecuteItalic(), _ => CanExecuteTextFormat());
         _underlineCommand = new RelayCommand(_ => ExecuteUnderline(), _ => CanExecuteTextFormat());
+        _strikethroughCommand = new RelayCommand(_ => ExecuteStrikethrough(), _ => CanExecuteTextFormat());
 
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
         BoldCommand = _boldCommand;
         ItalicCommand = _italicCommand;
         UnderlineCommand = _underlineCommand;
+        StrikethroughCommand = _strikethroughCommand;
         ToggleDocumentStateCommand = new RelayCommand(_ => IsDocumentLoaded = !IsDocumentLoaded);
     }
 
@@ -63,6 +69,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand BoldCommand { get; }
     public ICommand ItalicCommand { get; }
     public ICommand UnderlineCommand { get; }
+    public ICommand StrikethroughCommand { get; }
 
     // Плейсхолдер для демонстрации динамического обновления состояния кнопок.
     public ICommand ToggleDocumentStateCommand { get; }
@@ -144,6 +151,21 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
+    public bool IsStrikethroughActive
+    {
+        get => _isStrikethroughActive;
+        private set
+        {
+            if (_isStrikethroughActive == value)
+            {
+                return;
+            }
+
+            _isStrikethroughActive = value;
+            OnPropertyChanged();
+        }
+    }
+
     public bool IsBoldAtCursor
     {
         get => _isBoldAtCursor;
@@ -220,6 +242,7 @@ public class MainViewModel : INotifyPropertyChanged
         _boldCommand.RaiseCanExecuteChanged();
         _italicCommand.RaiseCanExecuteChanged();
         _underlineCommand.RaiseCanExecuteChanged();
+        _strikethroughCommand.RaiseCanExecuteChanged();
     }
 
     private void ExecuteBold()
@@ -248,11 +271,18 @@ public class MainViewModel : INotifyPropertyChanged
         ExecuteAction("Переключить подчеркивание");
     }
 
+    private void ExecuteStrikethrough()
+    {
+        _editorService?.ToggleStrikethrough();
+        ExecuteAction("Переключить зачёркивание");
+    }
+
     private void UpdateTextFormattingStateFromEditor()
     {
         IsBoldActive = _editorService?.IsBoldActive == true;
         IsItalicActive = _editorService?.IsItalicActive == true;
         IsUnderlineActive = _editorService?.IsUnderlineActive == true;
+        IsStrikethroughActive = _editorService?.IsStrikethroughActive == true;
     }
 
     private void SetDebugStateField(ref bool field, bool value, [CallerMemberName] string? propertyName = null)
