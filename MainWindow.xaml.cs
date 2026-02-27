@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -814,6 +816,162 @@ public partial class MainWindow : Window
             _hasUnsavedChanges = false;
             FormattingStateChanged?.Invoke();
             return true;
+        }
+
+        public bool ExportDocument(out string message)
+        {
+            message = string.Empty;
+
+            if (!CanEdit)
+            {
+                message = "редактор недоступен";
+                return false;
+            }
+
+            var dialog = new SaveFileDialog
+            {
+                Title = "Экспорт документа",
+                Filter = "Text (*.txt)|*.txt|HTML (*.html)|*.html|PDF (*.pdf)|*.pdf",
+                AddExtension = true,
+                OverwritePrompt = true,
+                FileName = string.IsNullOrWhiteSpace(_currentFilePath)
+                    ? "document"
+                    : Path.GetFileNameWithoutExtension(_currentFilePath)
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                message = "пользователь отменил выбор файла";
+                return false;
+            }
+
+            switch (dialog.FilterIndex)
+            {
+                case 1:
+                    ExportAsText(dialog.FileName);
+                    message = $"TXT → {Path.GetFileName(dialog.FileName)}";
+                    return true;
+                case 2:
+                    ExportAsHtml(dialog.FileName);
+                    message = $"HTML → {Path.GetFileName(dialog.FileName)}";
+                    return true;
+                case 3:
+                    message = "PDF пока не реализован: печать FlowDocument через PrintDialog в Microsoft Print to PDF/XPS или интеграция библиотеки (например, Syncfusion/iText).";
+                    MessageBox.Show(
+                        "PDF-экспорт пока не реализован.\n\n"
+                        + "Реалистичный путь:\n"
+                        + "1) Печать FlowDocument через PrintDialog в Microsoft Print to PDF (или XPS).\n"
+                        + "2) Либо экспорт через специализированную библиотеку (Syncfusion/iText).",
+                        "Экспорт PDF",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return false;
+                default:
+                    message = "неподдерживаемый формат";
+                    return false;
+            }
+        }
+
+        private void ExportAsText(string fileName)
+        {
+            var textRange = new TextRange(_editor.Document.ContentStart, _editor.Document.ContentEnd);
+            File.WriteAllText(fileName, textRange.Text, Encoding.UTF8);
+        }
+
+        private void ExportAsHtml(string fileName)
+        {
+            var html = ConvertDocumentToSimpleHtml(_editor.Document);
+            File.WriteAllText(fileName, html, Encoding.UTF8);
+        }
+
+        private static string ConvertDocumentToSimpleHtml(FlowDocument document)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("<!doctype html>");
+            sb.AppendLine("<html><head><meta charset=\"utf-8\"><title>Export</title></head><body>");
+
+            foreach (var block in document.Blocks)
+            {
+                if (block is not Paragraph paragraph)
+                {
+                    continue;
+                }
+
+                var align = paragraph.TextAlignment switch
+                {
+                    TextAlignment.Center => "center",
+                    TextAlignment.Right => "right",
+                    TextAlignment.Justify => "justify",
+                    _ => "left"
+                };
+
+                sb.Append("<p style=\"text-align:").Append(align).Append(";\">");
+                foreach (var inline in paragraph.Inlines)
+                {
+                    AppendInlineHtml(sb, inline);
+                }
+
+                sb.AppendLine("</p>");
+            }
+
+            sb.AppendLine("</body></html>");
+            return sb.ToString();
+        }
+
+        private static void AppendInlineHtml(StringBuilder sb, Inline inline)
+        {
+            switch (inline)
+            {
+                case Run run:
+                {
+                    var text = WebUtility.HtmlEncode(run.Text).Replace("\r\n", "<br/>").Replace("\n", "<br/>");
+
+                    if (run.TextDecorations?.Any(d => d.Location == TextDecorationLocation.Strikethrough) == true)
+                    {
+                        text = $"<s>{text}</s>";
+                    }
+
+                    if (run.TextDecorations?.Any(d => d.Location == TextDecorationLocation.Underline) == true)
+                    {
+                        text = $"<u>{text}</u>";
+                    }
+
+                    if (run.FontStyle == FontStyles.Italic)
+                    {
+                        text = $"<em>{text}</em>";
+                    }
+
+                    if (run.FontWeight == FontWeights.Bold)
+                    {
+                        text = $"<strong>{text}</strong>";
+                    }
+
+                    sb.Append(text);
+                    break;
+                }
+                case LineBreak:
+                    sb.Append("<br/>");
+                    break;
+                case Hyperlink hyperlink:
+                {
+                    var href = hyperlink.NavigateUri?.ToString() ?? "#";
+                    sb.Append("<a href=\"").Append(WebUtility.HtmlEncode(href)).Append("\">");
+                    foreach (var nested in hyperlink.Inlines)
+                    {
+                        AppendInlineHtml(sb, nested);
+                    }
+
+                    sb.Append("</a>");
+                    break;
+                }
+                case Span span:
+                    foreach (var nested in span.Inlines)
+                    {
+                        AppendInlineHtml(sb, nested);
+                    }
+
+                    break;
+            }
         }
 
         public void Undo()

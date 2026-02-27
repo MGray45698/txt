@@ -29,6 +29,7 @@
             <ToolBar>
                 <Button Content="New" Command="{Binding NewCommand}" ToolTip="Ctrl+N" />
                 <Button Content="📄" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
+                <Button Content="Экспорт" Command="{Binding ExportCommand}" ToolTip="Экспорт TXT/HTML/PDF-план" />
                 <Button Content="↶" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z" />
                 <Button Content="↷" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y / Ctrl+Shift+Z" />
                 <Button Content="[?]" Command="{Binding FootnoteCommand}" ToolTip="Вставить сноску" />

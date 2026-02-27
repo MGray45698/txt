@@ -23,6 +23,7 @@ public interface ITextEditorService
     TextAlignment CurrentParagraphAlignment { get; }
 
     bool SaveDocument();
+    bool ExportDocument(out string message);
     void Undo();
     void Redo();
     void ToggleBold();
@@ -53,6 +54,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private readonly RelayCommand _newCommand;
     private readonly RelayCommand _saveCommand;
+    private readonly RelayCommand _exportCommand;
     private readonly RelayCommand _undoCommand;
     private readonly RelayCommand _redoCommand;
     private readonly RelayCommand _footnoteCommand;
@@ -81,6 +83,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         _newCommand = new RelayCommand(_ => ExecuteAction("Создать новый документ"));
         _saveCommand = new RelayCommand(_ => ExecuteSave(), _ => CanExecuteSave());
+        _exportCommand = new RelayCommand(_ => ExecuteExport(), _ => CanExecuteSave());
         _undoCommand = new RelayCommand(_ => ExecuteUndo(), _ => CanExecuteUndo());
         _redoCommand = new RelayCommand(_ => ExecuteRedo(), _ => CanExecuteRedo());
         _footnoteCommand = new RelayCommand(_ => ExecuteFootnote(), _ => CanExecuteTextFormat());
@@ -95,6 +98,7 @@ public class MainViewModel : INotifyPropertyChanged
 
         NewCommand = _newCommand;
         SaveCommand = _saveCommand;
+        ExportCommand = _exportCommand;
         UndoCommand = _undoCommand;
         RedoCommand = _redoCommand;
         FootnoteCommand = _footnoteCommand;
@@ -113,6 +117,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     public ICommand NewCommand { get; }
     public ICommand SaveCommand { get; }
+    public ICommand ExportCommand { get; }
     public ICommand UndoCommand { get; }
     public ICommand RedoCommand { get; }
     public ICommand FootnoteCommand { get; }
@@ -371,6 +376,7 @@ public class MainViewModel : INotifyPropertyChanged
     private void UpdateCommandStates()
     {
         _saveCommand.RaiseCanExecuteChanged();
+        _exportCommand.RaiseCanExecuteChanged();
         _undoCommand.RaiseCanExecuteChanged();
         _redoCommand.RaiseCanExecuteChanged();
         _footnoteCommand.RaiseCanExecuteChanged();
@@ -397,6 +403,18 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     private bool CanExecuteSave() => IsDocumentLoaded && _editorService?.CanEdit == true;
+
+    private void ExecuteExport()
+    {
+        if (_editorService?.ExportDocument(out var message) == true)
+        {
+            ExecuteAction($"Экспорт: {message}");
+        }
+        else
+        {
+            ExecuteAction($"Экспорт отменён: {message ?? "без изменений"}");
+        }
+    }
 
     private void ExecuteUndo()
     {
