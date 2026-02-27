@@ -1,0 +1,132 @@
+<Window x:Class="TxtEditorSkeleton.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="{Binding WindowTitle}"
+        Width="1000"
+        Height="700"
+        Loaded="Window_OnLoaded"
+        Closing="Window_OnClosing">
+
+    <Window.InputBindings>
+        <!-- Заготовки под горячие клавиши -->
+        <KeyBinding Key="N" Modifiers="Control" Command="{Binding NewCommand}" />
+        <KeyBinding Key="S" Modifiers="Control" Command="{Binding SaveCommand}" />
+        <KeyBinding Key="O" Modifiers="Control" Command="{Binding ImportCommand}" />
+        <KeyBinding Key="Z" Modifiers="Control" Command="{Binding UndoCommand}" />
+        <KeyBinding Key="Y" Modifiers="Control" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="Z" Modifiers="Control+Shift" Command="{Binding RedoCommand}" />
+        <KeyBinding Key="B" Modifiers="Control" Command="{Binding BoldCommand}" />
+        <KeyBinding Key="I" Modifiers="Control" Command="{Binding ItalicCommand}" />
+        <KeyBinding Key="U" Modifiers="Control" Command="{Binding UnderlineCommand}" />
+        <KeyBinding Key="X" Modifiers="Control+Shift" Command="{Binding StrikethroughCommand}" />
+        <KeyBinding Key="L" Modifiers="Control" Command="{Binding AlignLeftCommand}" />
+        <KeyBinding Key="E" Modifiers="Control" Command="{Binding AlignCenterCommand}" />
+        <KeyBinding Key="R" Modifiers="Control" Command="{Binding AlignRightCommand}" />
+    </Window.InputBindings>
+
+    <DockPanel LastChildFill="True">
+        <ToolBarTray DockPanel.Dock="Top">
+            <ToolBar>
+                <Button Content="New" Command="{Binding NewCommand}" ToolTip="Ctrl+N" />
+                <Button Content="📄" Command="{Binding SaveCommand}" ToolTip="Ctrl+S" />
+                <Button Content="Импорт DOCX" Command="{Binding ImportCommand}" ToolTip="Ctrl+O" />
+                <Button Content="Экспорт" Command="{Binding ExportCommand}" ToolTip="Экспорт TXT/HTML/DOCX (PDF-план)" />
+                <Button Content="↶" Command="{Binding UndoCommand}" ToolTip="Ctrl+Z" />
+                <Button Content="↷" Command="{Binding RedoCommand}" ToolTip="Ctrl+Y / Ctrl+Shift+Z" />
+                <Button Content="[?]" Command="{Binding FootnoteCommand}" ToolTip="Вставить сноску" />
+                <Button Content="—" Command="{Binding DividerCommand}" ToolTip="Вставить разделитель" />
+                <Separator />
+                <ToggleButton Content="B"
+                              Width="32"
+                              Command="{Binding BoldCommand}"
+                              IsChecked="{Binding IsBoldActive, Mode=OneWay}"
+                              ToolTip="Ctrl+B" />
+                <ToggleButton Content="I"
+                              Width="32"
+                              Command="{Binding ItalicCommand}"
+                              IsChecked="{Binding IsItalicActive, Mode=OneWay}"
+                              ToolTip="Ctrl+I" />
+                <ToggleButton Content="U"
+                              Width="32"
+                              Command="{Binding UnderlineCommand}"
+                              IsChecked="{Binding IsUnderlineActive, Mode=OneWay}"
+                              ToolTip="Ctrl+U" />
+                <ToggleButton Content="S"
+                              Width="32"
+                              Command="{Binding StrikethroughCommand}"
+                              IsChecked="{Binding IsStrikethroughActive, Mode=OneWay}"
+                              ToolTip="Ctrl+Shift+X" />
+                <Separator />
+                <ToggleButton Content="L"
+                              Width="32"
+                              Command="{Binding AlignLeftCommand}"
+                              IsChecked="{Binding IsAlignLeftActive, Mode=OneWay}"
+                              ToolTip="Ctrl+L" />
+                <ToggleButton Content="C"
+                              Width="32"
+                              Command="{Binding AlignCenterCommand}"
+                              IsChecked="{Binding IsAlignCenterActive, Mode=OneWay}"
+                              ToolTip="Ctrl+E" />
+                <ToggleButton Content="R"
+                              Width="32"
+                              Command="{Binding AlignRightCommand}"
+                              IsChecked="{Binding IsAlignRightActive, Mode=OneWay}"
+                              ToolTip="Ctrl+R" />
+                <Separator />
+                <Button Content="Toggle state" Command="{Binding ToggleDocumentStateCommand}" />
+            </ToolBar>
+        </ToolBarTray>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding DocumentStateLabel}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding DirtyStateLabel}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding UndoStateLabel}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding RedoStateLabel}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding DebugPanelText}" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="10">
+            <RichTextBox x:Name="EditorBox"
+                         VerticalScrollBarVisibility="Auto"
+                         AcceptsTab="True"
+                         SpellCheck.IsEnabled="True"
+                         SelectionChanged="Editor_OnSelectionChanged"
+                         PreviewKeyDown="Editor_OnPreviewKeyDown">
+                <FlowDocument>
+                    <FlowDocument.Resources>
+                        <Style x:Key="DividerStyle" TargetType="{x:Type Paragraph}">
+                            <Setter Property="TextAlignment" Value="Center" />
+                            <Setter Property="Foreground" Value="#8A8A8A" />
+                            <Setter Property="FontSize" Value="10" />
+                            <Setter Property="Margin" Value="0,8,0,8" />
+                        </Style>
+                    </FlowDocument.Resources>
+                    <Paragraph>
+                        <Run Text="Здесь будет редактируемый контент (FlowDocument)." />
+                    </Paragraph>
+                </FlowDocument>
+            </RichTextBox>
+        </Grid>
+    </DockPanel>
+</Window>
